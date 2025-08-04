@@ -1,4 +1,5 @@
 # lamamp.is
+Hi
 Repository for my personal website.
 
 Check it out at www.lamamp.is
