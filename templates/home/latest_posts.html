@@ -1,0 +1,18 @@
+<h2>Latest Posts:</h2>
+<div class="box">
+    <ul>
+        {{ range .Pages }}
+        <li style="margin-bottom: 4px">
+            <a href="/garden/{{ .Slug }}" class="no-underline"
+                >[{{ .Title }}]</a
+            >
+            <small> {{ .ModTime.Format "02-01-2006" }} </small>
+        </li>
+
+        {{ end }}
+    </ul>
+    <div style="text-align: right; margin-top: 1em">
+        <a href="/garden">View All Posts →</a>
+    </div>
+</div>
+<br />

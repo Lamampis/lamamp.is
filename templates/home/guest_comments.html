@@ -1,0 +1,11 @@
+{{ if .Entries }} {{ range .Entries }}
+<div class="guestbook-entry">
+    <strong>{{ if .Name }}{{ .Name }}{{ else }}Anonymous{{ end }}</strong>
+    said:<br />
+    <p>{{ .Message }}</p>
+    <small><em>at {{ .Timestamp.Format "2006-01-02 15:04:05" }}</em></small
+    ><br />
+</div>
+{{ end }} {{ else }}
+<p>No entries yet.</p>
+{{ end }}

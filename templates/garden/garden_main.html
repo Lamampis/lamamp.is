@@ -1,0 +1,15 @@
+<div class="centered_text">
+    <ul style="list-style-type: none; padding: 0">
+        {{ range .Pages }}
+        <li style="margin-bottom: 15px">
+            <a href="/garden/{{ .Slug }}" class="no-underline">[{{ .Title }}]</a
+            ><br />
+
+            <small>
+                Created: {{ .Created.Format "02-01-2006" }} | Updated: {{
+                .ModTime.Format "02-01-2006" }}
+            </small>
+        </li>
+        {{ end }}
+    </ul>
+</div>

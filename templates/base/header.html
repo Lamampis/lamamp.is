@@ -1,0 +1,41 @@
+{{ define "header" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>lamamp.is</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8"/>
+    <link rel="icon" href="/static/images/sm64penguin.png" type="image/png">
+    <script type="text/javascript" src="/static/trail.js"></script>
+    {{ if eq .Theme "light" }}
+  <link rel="stylesheet" href="/static/style-light.css">
+{{ else }}
+  <link rel="stylesheet" href="/static/style-dark.css">
+{{ end }}
+</head>
+<body>
+<header>
+    <h1>lamamp.is</h1>
+
+    <nav class="container">
+    <div class="left">
+      <a href="/home">[home]</a>
+      <a href="/garden">[garden]</a>
+      <a href="/anilist">[anilist]</a>
+
+    </div>
+      <div class="right">
+        <form action="/set-theme" method="POST" onchange="this.submit()" style="display:inline;">
+          <label class="theme-toggle">
+            <input type="checkbox" name="theme" value="light" {{if eq .Theme "light"}}checked{{end}}>
+            <span></span>
+          </label>
+        </form>
+        <span class="nav-text">|</span>
+        <a href="/about">[about]</a>
+      </div>
+    </nav>
+</header>
+<main>
+<!-- ################START############## -->
+{{ end }}

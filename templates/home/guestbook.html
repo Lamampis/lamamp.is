@@ -1,0 +1,30 @@
+<h2>Comments:</h2>
+<details>
+    <summary class="collapsible">New Comment:</summary>
+    <div class="guestbook-form">
+        <form method="POST" action="/form">
+            <label for="name">Name:</label>
+            <input
+                type="text"
+                name="name"
+                placeholder="(optional)"
+                maxlength="20"
+            />
+            <label for="message">Comment:</label>
+            <textarea
+                name="message"
+                placeholder="What's on your mind?"
+                rows="1"
+                required
+                maxlength="500"
+            ></textarea
+            ><br />
+            <button type="submit">Sign Guestbook</button>
+        </form>
+    </div>
+    <small
+        >Please keep your comments respectful and don't spam. Anyone can comment
+        without an account, so don't ruin it for others.
+    </small>
+</details>
+<br />

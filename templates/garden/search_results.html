@@ -1,0 +1,25 @@
+<h2>Search Results for "{{ .Query }}" ({{ .Results }} found)</h2>
+
+{{ if .Posts }}
+<h3>In <a href="/garden">Garden Posts</a>:</h3>
+<ul>
+    {{ range .Posts }}
+    <li>
+        <a href="/garden/{{ .Slug }}">{{ .Title }}</a> — {{ .Created |
+        dateFormat }}
+    </li>
+    {{ end }}
+</ul>
+{{ end }} {{ if .Anime }}
+<h3>In <a href="/anilist">Anime/Manga</a>:</h3>
+<ul>
+    {{ range .Anime }}
+    <li>
+        <strong>#{{ .Rank }}</strong>: {{ .Title }} ({{ .Tier }})<br />
+        {{ .Comments }}
+    </li>
+    {{ end }}
+</ul>
+{{ end }} {{ if eq .Results 0 }}
+<p>Oops! Nothing found for "<strong>{{ .Query }}</strong>".</p>
+{{ end }}
