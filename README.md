@@ -9,6 +9,6 @@ Run with ```./lamamp```
 
 Or just ```go run main.go --prod```
 
-To test locally, run ```go run main.go```
+To test locally run ```go run main.go```
 
 Update with ```git pull origin main```
