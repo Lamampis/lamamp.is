@@ -19,8 +19,8 @@
    Custom Fonts
 ======================= */
 @font-face {
-    font-family: 'Iosevka';
-    src: url('fonts/Iosevka-01.woff2') format('woff2');
+    font-family: "Iosevka";
+    src: url("fonts/Iosevka-01.woff2") format("woff2");
     font-weight: normal;
     font-style: normal;
     font-display: swap;
@@ -56,6 +56,7 @@ body {
     font-weight: normal;
     max-width: 900px;
     margin: 0 auto;
+    background-image: url("images/stars.gif");
 }
 
 img {
