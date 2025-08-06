@@ -312,3 +312,39 @@ ul {
     background-color: var(--secondary);
     color: var(--primary);
 }
+.search-results {
+    margin-top: 20px;
+}
+
+.search-result {
+    margin-bottom: 25px;
+    padding: 15px;
+    border-left: 4px solid var(--secondary);
+    border-radius: 0 4px 4px 0;
+}
+
+.search-result h3 {
+    margin: 0 0 10px 0;
+}
+
+.search-result h3 a {
+    color: var(--secondary);
+    text-decoration: none;
+}
+
+.search-result h3 a:hover {
+    text-decoration: underline;
+}
+
+.search-snippet {
+    color: var(--secondary);
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+.search-type {
+    font-size: 0.9em;
+    color: var(--gray);
+    margin: 5px 0 0 0;
+    font-style: italic;
+}

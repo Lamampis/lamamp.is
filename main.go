@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -54,6 +55,12 @@ type Anime struct {
 	ImageURL string
 	Tier     string
 	Comments string
+}
+type SearchResult struct {
+	Title   string
+	URL     string
+	Snippet string
+	Type    string // "garden", "page", "anime", "guestbook"
 }
 
 // Theme Stuff
@@ -241,6 +248,55 @@ func loadAnimeRankings() ([]Anime, error) {
 }
 
 // Tools
+// Helper function to strip HTML tags
+func stripHTML(s string) string {
+	// Remove HTML tags
+	re := regexp.MustCompile(`<[^>]*>`)
+	s = re.ReplaceAllString(s, " ")
+
+	// Clean up multiple spaces and newlines
+	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, " ")
+
+	return strings.TrimSpace(s)
+}
+
+// Helper function to get a snippet around the search term
+func getSnippet(text, query string) string {
+	// Strip HTML tags first
+	text = stripHTML(text)
+	text = strings.TrimSpace(text)
+
+	if len(text) <= 200 {
+		return text
+	}
+
+	lowerText := strings.ToLower(text)
+	pos := strings.Index(lowerText, strings.ToLower(query))
+	if pos == -1 {
+		return text[:200] + "..."
+	}
+
+	start := pos - 100
+	if start < 0 {
+		start = 0
+	}
+
+	end := pos + 100
+	if end > len(text) {
+		end = len(text)
+	}
+
+	snippet := text[start:end]
+	if start > 0 {
+		snippet = "..." + snippet
+	}
+	if end < len(text) {
+		snippet = snippet + "..."
+	}
+
+	return snippet
+}
+
 func searchHandler(w http.ResponseWriter, r *http.Request) {
 	query := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q")))
 	if query == "" {
@@ -248,33 +304,67 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var results []GardenPage
+	var results []SearchResult
+
+	// 1. Search Garden posts
 	files, _ := filepath.Glob("garden/*.md")
 	for _, f := range files {
 		slug := strings.TrimSuffix(filepath.Base(f), ".md")
-		body, title, created, modTime, err := renderMarkdownFile(f)
+		body, title, _, _, err := renderMarkdownFile(f)
 		if err != nil {
 			continue
 		}
 		if strings.Contains(strings.ToLower(title), query) ||
 			strings.Contains(strings.ToLower(string(body)), query) {
-			results = append(results, GardenPage{
-				Slug:    slug,
+			results = append(results, SearchResult{
 				Title:   title,
-				Created: created,
-				ModTime: modTime,
+				URL:     "/garden/" + slug,
+				Snippet: getSnippet(string(body), query),
+				Type:    "garden",
 			})
 		}
 	}
 
-	var animeResults []Anime
+	// 2. Search About page
+	aboutContent, err := os.ReadFile("templates/about/about.html")
+	if err == nil {
+		aboutText := stripHTML(string(aboutContent))
+		if strings.Contains(strings.ToLower(aboutText), query) {
+			results = append(results, SearchResult{
+				Title:   "About",
+				URL:     "/about",
+				Snippet: getSnippet(aboutText, query),
+				Type:    "page",
+			})
+		}
+	}
+	// 3. Search Cyber page
+	cyberContent, err := os.ReadFile("templates/cyber/cyber.html")
+	if err == nil {
+		aboutText := stripHTML(string(cyberContent))
+		if strings.Contains(strings.ToLower(aboutText), query) {
+			results = append(results, SearchResult{
+				Title:   "Cyber",
+				URL:     "/cyber",
+				Snippet: getSnippet(aboutText, query),
+				Type:    "page",
+			})
+		}
+	}
+
+	// 4. Search Anime rankings
 	animeList, err := loadAnimeRankings()
 	if err == nil {
 		for _, a := range animeList {
 			if strings.Contains(strings.ToLower(a.Title), query) ||
 				strings.Contains(strings.ToLower(a.Comments), query) ||
 				strings.Contains(strings.ToLower(a.Tier), query) {
-				animeResults = append(animeResults, a)
+				results = append(results, SearchResult{
+					Title:   a.Title + " (Anime)",
+					URL:     "/anilist",
+					Snippet: a.Comments,
+					Type:    "anime",
+				})
 			}
 		}
 	}
@@ -282,9 +372,8 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 	content, err := renderSnippets([]string{"search_results.html"}, map[string]any{
 		"search_results.html": map[string]any{
 			"Query":   query,
-			"Posts":   results,
-			"Anime":   animeResults,
-			"Results": len(results) + len(animeResults),
+			"Results": results,
+			"Count":   len(results),
 		},
 	})
 	if err != nil {
@@ -339,9 +428,9 @@ func loadTemplates() *template.Template {
 		"templates/home/searchbar.html",
 		"templates/garden/garden_main.html",
 		"templates/garden/return.html",
-		"templates/garden/garden_search.html",
-		"templates/garden/search_results.html",
+		"templates/base/search_results.html",
 		"templates/anime/anime_table.html",
+		"templates/cyber/cyber.html",
 		"templates/about/about.html",
 	))
 }
@@ -358,7 +447,7 @@ func generatePagination(currentPage, totalItems, pageSize int) template.HTML {
 		if i == currentPage {
 			paginationBuf.WriteString(`>[<span class="current-page">` + strconv.Itoa(i) + `</span>]< `)
 		} else {
-			paginationBuf.WriteString(`[<a href="/?page=` + strconv.Itoa(i) + `">` + strconv.Itoa(i) + `</a>] `)
+			paginationBuf.WriteString(`<a href="/?page=` + strconv.Itoa(i) + `">[` + strconv.Itoa(i) + `]</a> `)
 		}
 	}
 	paginationBuf.WriteString(`</div>`)
@@ -526,7 +615,7 @@ func gardenHandler(w http.ResponseWriter, r *http.Request) {
 	snippetData := map[string]any{
 		"garden_main.html": map[string]any{"Pages": pages},
 	}
-	content, err := renderSnippets([]string{"garden_search.html", "garden_main.html"}, snippetData)
+	content, err := renderSnippets([]string{"garden_main.html"}, snippetData)
 	if err != nil {
 		http.Error(w, "Render error", http.StatusInternalServerError)
 		return
@@ -557,6 +646,19 @@ func animeListHandler(w http.ResponseWriter, r *http.Request) {
 
 	renderPage(w, PageData{
 		Title:   "My Anime Rankings",
+		Content: content,
+		Theme:   theme,
+	})
+}
+func cyberHandler(w http.ResponseWriter, r *http.Request) {
+	theme := getTheme(r)
+	content, err := renderSnippets([]string{"cyber.html"}, nil)
+	if err != nil {
+		http.Error(w, "Render error", http.StatusInternalServerError)
+		return
+	}
+	renderPage(w, PageData{
+		Title:   "Cyber",
 		Content: content,
 		Theme:   theme,
 	})
@@ -647,6 +749,8 @@ func registerRoutes(mux *http.ServeMux) {
 			gardenHandler(w, r)
 		case "/anilist":
 			animeListHandler(w, r)
+		case "/cyber":
+			cyberHandler(w, r)
 		case "/search":
 			searchHandler(w, r)
 		default:

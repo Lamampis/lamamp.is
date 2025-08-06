@@ -1,0 +1,19 @@
+<h2>Search Results for "{{ .Query }}" ({{ .Count }} found)</h2>
+
+{{ if .Results }}
+<div class="search-results">
+    {{ range .Results }}
+    <div class="search-result">
+        <h3><a href="{{ .URL }}">{{ .Title }}</a></h3>
+        <p class="search-snippet">{{ .Snippet }}</p>
+        <p class="search-type">
+            {{ if eq .Type "garden" }}Garden Post {{ else if eq .Type "page"
+            }}Page {{ else if eq .Type "anime" }}Anime/Manga {{ else if eq .Type
+            "guestbook" }}Guestbook {{ end }}
+        </p>
+    </div>
+    {{ end }}
+</div>
+{{ else }}
+<p>Oops! Nothing found for "<strong>{{ .Query }}</strong>".</p>
+{{ end }}
