@@ -183,6 +183,7 @@ func loadMarkdownFiles() ([]MarkdownMeta, error) {
 
 // --- DB ---
 // Modified connectDB to take a database file path
+// Modified connectDB to take a database file path
 func connectDB(dbPath string) *sql.DB {
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
@@ -191,6 +192,46 @@ func connectDB(dbPath string) *sql.DB {
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)
 	}
+
+	if strings.HasSuffix(dbPath, "comments.db") {
+		_, err := db.Exec(`
+			CREATE TABLE IF NOT EXISTS guestbook_entries (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				name TEXT NOT NULL,
+				message TEXT NOT NULL,
+				timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+			)
+		`)
+		if err != nil {
+			log.Fatalf("Error creating guestbook_entries table: %v", err)
+		}
+	}
+
+	if strings.HasSuffix(dbPath, "content.db") {
+		_, err := db.Exec(`
+			CREATE TABLE IF NOT EXISTS quotes (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				text TEXT NOT NULL
+			)
+		`)
+		if err != nil {
+			log.Fatalf("Error creating quotes table: %v", err)
+		}
+
+		_, err = db.Exec(`
+			CREATE TABLE IF NOT EXISTS anime_rankings (
+				rank INTEGER PRIMARY KEY,
+				title TEXT NOT NULL,
+				image_url TEXT,
+				tier TEXT,
+				comments TEXT
+			)
+		`)
+		if err != nil {
+			log.Fatalf("Error creating anime_rankings table: %v", err)
+		}
+	}
+
 	return db
 }
 
