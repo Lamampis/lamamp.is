@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"flag"
+	"fmt"
 	"html"
 	"html/template"
 	"log"
@@ -182,7 +183,6 @@ func loadMarkdownFiles() ([]MarkdownMeta, error) {
 }
 
 // --- DB ---
-// Modified connectDB to take a database file path
 // Modified connectDB to take a database file path
 func connectDB(dbPath string) *sql.DB {
 	db, err := sql.Open("sqlite", dbPath)
@@ -428,6 +428,31 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 func gardenHandler(w http.ResponseWriter, r *http.Request) {
 	theme := getTheme(r)
+
+	// Handle individual posts
+	if slug, found := strings.CutPrefix(r.URL.Path, "/garden/"); found && slug != "" {
+		if _, err := os.Stat(filepath.Join("garden", slug+".md")); err != nil {
+			http.NotFound(w, r)
+			return
+		}
+
+		html, title, created, modTime, _ := renderMarkdownFile(filepath.Join("garden", slug+".md"))
+
+		// Add date metadata to the top
+		dateInfo := template.HTML(fmt.Sprintf(`<div style="margin-bottom: 20px; color: #666; font-size: 0.9em;">Created: %s | Updated: %s</div>`,
+			created.Format("02-01-2006"), modTime.Format("02-01-2006")))
+
+		// Add return link at bottom
+		returnContent, _ := renderSnippets([]string{"return.html"}, map[string]any{})
+
+		// Combine all parts
+		html = dateInfo + html + template.HTML(returnContent)
+
+		renderPage(w, PageData{title, html, theme, modTime})
+		return
+	}
+
+	// Handle garden listing page
 	mdFiles, _ := loadMarkdownFiles()
 	var pages []GardenPage
 	for _, md := range mdFiles {
@@ -526,13 +551,13 @@ func registerRoutes(mux *http.ServeMux) {
 			homeHandler(w, r)
 			return
 		}
-		if slug, found := strings.CutPrefix(r.URL.Path, "/garden/"); found {
-			if _, err := os.Stat(filepath.Join("garden", slug+".md")); err == nil {
-				html, title, _, modTime, _ := renderMarkdownFile(filepath.Join("garden", slug+".md"))
-				renderPage(w, PageData{title, html, getTheme(r), modTime})
-				return
-			}
+
+		// Handle all garden routes with gardenHandler
+		if strings.HasPrefix(r.URL.Path, "/garden") {
+			gardenHandler(w, r)
+			return
 		}
+
 		switch r.URL.Path {
 		case "/form":
 			formHandler(w, r)
@@ -541,8 +566,6 @@ func registerRoutes(mux *http.ServeMux) {
 		case "/about":
 			content, _ := renderSnippets([]string{"about.html"}, nil)
 			renderPage(w, PageData{"About", content, getTheme(r), time.Time{}})
-		case "/garden":
-			gardenHandler(w, r)
 		case "/anilist":
 			animeList, _ := loadAnimeRankings()
 			content, _ := renderSnippets([]string{"anime_table.html"}, map[string]any{"anime_table.html": animeList})
