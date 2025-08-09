@@ -2,9 +2,7 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
 	"database/sql"
-	"encoding/base64"
 	"flag"
 	"html"
 	"html/template"
@@ -16,7 +14,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/yuin/goldmark"
@@ -30,8 +27,6 @@ const guestbookPageSize = 7
 
 var templates *template.Template
 var db *sql.DB
-var visitorCount int
-var visitorCountMutex sync.Mutex
 
 // --- Data Types ---
 type PageData struct {
@@ -449,23 +444,16 @@ func generatePagination(currentPage, totalItems, pageSize int) template.HTML {
 }
 
 // --- Middleware ---
-func generateUserID() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	return base64.URLEncoding.EncodeToString(b)
-}
-
 func loggingMiddleware(next http.Handler) http.Handler {
 	ignoredExtensions := map[string]struct{}{
-		".jpg":   {},
-		".jpeg":  {},
-		".woff2": {},
-		".png":   {},
-		".gif":   {},
-		".svg":   {},
-		".ico":   {},
-		".css":   {},
-		".js":    {},
+		".jpg":  {},
+		".jpeg": {},
+		".png":  {},
+		".gif":  {},
+		".svg":  {},
+		".ico":  {},
+		".css":  {},
+		".js":   {},
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -477,34 +465,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 			}
 		}
 
-		var userID string
-		isNewUser := false
-		cookie, err := r.Cookie("user_id")
-		if err != nil {
-			isNewUser = true
-			userID = generateUserID()
-			http.SetCookie(w, &http.Cookie{
-				Name:     "user_id",
-				Value:    userID,
-				Path:     "/",
-				HttpOnly: true,
-				Secure:   true,
-				SameSite: http.SameSiteLaxMode,
-				MaxAge:   86400 * 365 * 10,
-			})
-		} else {
-			userID = cookie.Value
-		}
-
-		if isNewUser {
-			visitorCountMutex.Lock()
-			visitorCount++
-			log.Printf("NEW VISITOR [%s] Total Visitors: %d", userID, visitorCount)
-			visitorCountMutex.Unlock()
-		} else {
-			log.Printf("[%s] %s %s", userID, r.Method, r.URL.Path)
-		}
-
+		log.Printf("%s %s", r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
 }
@@ -591,7 +552,7 @@ func main() {
 	}
 	defer logFile.Close()
 	log.SetOutput(logFile)
-	log.SetFlags(log.LstdFlags | log.Lshortfile) // Optional: Add line numbers for debugging
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	templates = loadTemplates()
 	db = connectDB()
