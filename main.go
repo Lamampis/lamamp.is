@@ -452,14 +452,15 @@ func generatePagination(currentPage, totalItems, pageSize int) template.HTML {
 // --- Middleware ---
 func loggingMiddleware(next http.Handler) http.Handler {
 	ignoredExtensions := map[string]struct{}{
-		".jpg":  {},
-		".jpeg": {},
-		".png":  {},
-		".gif":  {},
-		".svg":  {},
-		".ico":  {},
-		".css":  {},
-		".js":   {},
+		".jpg":   {},
+		".woff2": {},
+		".jpeg":  {},
+		".png":   {},
+		".gif":   {},
+		".svg":   {},
+		".ico":   {},
+		".css":   {},
+		".js":    {},
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
