@@ -2,9 +2,7 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
 	"database/sql"
-	"encoding/base64"
 	"flag"
 	"html"
 	"html/template"
@@ -32,11 +30,10 @@ var db *sql.DB
 
 // --- Data Types ---
 type PageData struct {
-	Title     string
-	Content   template.HTML
-	Theme     string
-	ModTime   time.Time
-	CSRFToken string
+	Title   string
+	Content template.HTML
+	Theme   string
+	ModTime time.Time
 }
 
 type GuestbookEntry struct {
@@ -329,39 +326,9 @@ func loadTemplates() *template.Template {
 	))
 }
 
-// --- Security ---
-func generateCSRFToken() string {
-	b := make([]byte, 32)
-	rand.Read(b)
-	return base64.StdEncoding.EncodeToString(b)
-}
-
-func setCSRFToken(w http.ResponseWriter, r *http.Request) string {
-	if cookie, err := r.Cookie("csrf_token"); err == nil {
-		return cookie.Value
-	}
-
-	token := generateCSRFToken()
-	http.SetCookie(w, &http.Cookie{
-		Name:     "csrf_token",
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
-		MaxAge:   3600,
-	})
-	return token
-}
-
-func validateCSRFToken(r *http.Request) bool {
-	cookie, err := r.Cookie("csrf_token")
-	return err == nil && cookie.Value == r.FormValue("csrf_token")
-}
-
 // --- Handlers ---
 func formHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost || !validateCSRFToken(r) {
+	if r.Method != http.MethodPost {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
@@ -409,7 +376,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	})
 	content += generatePagination(page, totalEntries, guestbookPageSize)
 
-	renderPage(w, PageData{"Home", content, theme, time.Time{}, setCSRFToken(w)})
+	renderPage(w, PageData{"Home", content, theme, time.Time{}})
 }
 
 func gardenHandler(w http.ResponseWriter, r *http.Request) {
@@ -420,7 +387,7 @@ func gardenHandler(w http.ResponseWriter, r *http.Request) {
 		pages = append(pages, GardenPage{Slug: md.Slug, Title: md.Title, Created: md.Created, ModTime: md.ModTime})
 	}
 	content, _ := renderSnippets([]string{"garden_main.html"}, map[string]any{"garden_main.html": map[string]any{"Pages": pages}})
-	renderPage(w, PageData{"Garden", content, theme, time.Time{}, setCSRFToken(w)})
+	renderPage(w, PageData{"Garden", content, theme, time.Time{}})
 }
 
 func searchHandler(w http.ResponseWriter, r *http.Request) {
@@ -454,7 +421,7 @@ func searchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	content, _ := renderSnippets([]string{"search_results.html"}, map[string]any{"search_results.html": map[string]any{"Query": query, "Results": results, "Count": len(results)}})
-	renderPage(w, PageData{"Search Results", content, getTheme(r), time.Time{}, setCSRFToken(w)})
+	renderPage(w, PageData{"Search Results", content, getTheme(r), time.Time{}})
 }
 
 // --- Pagination ---
@@ -495,8 +462,7 @@ func registerRoutes(mux *http.ServeMux) {
 		if slug, found := strings.CutPrefix(r.URL.Path, "/garden/"); found {
 			if _, err := os.Stat(filepath.Join("garden", slug+".md")); err == nil {
 				html, title, _, modTime, _ := renderMarkdownFile(filepath.Join("garden", slug+".md"))
-				renderPage(w, PageData{title, html, getTheme(r), modTime, setCSRFToken(w)})
-
+				renderPage(w, PageData{title, html, getTheme(r), modTime})
 				return
 			}
 		}
@@ -507,16 +473,16 @@ func registerRoutes(mux *http.ServeMux) {
 			setThemeHandler(w, r)
 		case "/about":
 			content, _ := renderSnippets([]string{"about.html"}, nil)
-			renderPage(w, PageData{"About", content, getTheme(r), time.Time{}, setCSRFToken(w)})
+			renderPage(w, PageData{"About", content, getTheme(r), time.Time{}})
 		case "/garden":
 			gardenHandler(w, r)
 		case "/anilist":
 			animeList, _ := loadAnimeRankings()
 			content, _ := renderSnippets([]string{"anime_table.html"}, map[string]any{"anime_table.html": animeList})
-			renderPage(w, PageData{"My Anime Rankings", content, getTheme(r), time.Time{}, setCSRFToken(w)})
+			renderPage(w, PageData{"My Anime Rankings", content, getTheme(r), time.Time{}})
 		case "/cyber":
 			content, _ := renderSnippets([]string{"cyber.html"}, nil)
-			renderPage(w, PageData{"Cyber", content, getTheme(r), time.Time{}, setCSRFToken(w)})
+			renderPage(w, PageData{"Cyber", content, getTheme(r), time.Time{}})
 		case "/search":
 			searchHandler(w, r)
 		default:
@@ -524,7 +490,7 @@ func registerRoutes(mux *http.ServeMux) {
 				http.StripPrefix("/static/", http.FileServer(http.Dir("static"))).ServeHTTP(w, r)
 			} else {
 				content, _ := renderSnippets([]string{"404.html"}, nil)
-				renderPage(w, PageData{"404", content, getTheme(r), time.Time{}, setCSRFToken(w)})
+				renderPage(w, PageData{"404", content, getTheme(r), time.Time{}})
 			}
 		}
 	})
