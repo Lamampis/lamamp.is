@@ -1,6 +1,6 @@
 :root {
-    --primary: #000000;
-    --secondary: #ffffff;
+    --primary: #ffffff;
+    --secondary: #000000;
     --hover: #2563eb;
     --gray: #708090;
     --font-family-main: "Iosevka", Arial, Verdana;
@@ -10,7 +10,7 @@
     display: block;
     margin: 0 auto;
     border: 2px solid white;
-    filter: invert(0%);
+    filter: invert(100%);
     max-width: 360px;
     width: 100%;
     height: auto;
@@ -37,7 +37,7 @@
 .left {
     display: flex;
     align-items: center;
-    gap: 16px; /* optional, for spacing between links */
+    gap: 14px; /* optional, for spacing between links */
 }
 .right {
     display: flex;
