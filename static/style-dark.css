@@ -34,11 +34,15 @@
     margin: 0px;
 }
 
-.left,
+.left {
+    display: flex;
+    align-items: center;
+    gap: 16px; /* optional, for spacing between links */
+}
 .right {
     display: flex;
     align-items: center;
-    gap: 8px; /* optional, for spacing between links */
+    gap: 10px; /* optional, for spacing between links */
 }
 
 .center {

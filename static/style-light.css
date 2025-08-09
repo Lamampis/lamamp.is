@@ -1,6 +1,6 @@
 :root {
-    --primary: #ffffff;
-    --secondary: #000000;
+    --primary: #000000;
+    --secondary: #ffffff;
     --hover: #2563eb;
     --gray: #708090;
     --font-family-main: "Iosevka", Arial, Verdana;
@@ -10,7 +10,7 @@
     display: block;
     margin: 0 auto;
     border: 2px solid white;
-    filter: invert(100%);
+    filter: invert(0%);
     max-width: 360px;
     width: 100%;
     height: auto;
@@ -34,11 +34,15 @@
     margin: 0px;
 }
 
-.left,
+.left {
+    display: flex;
+    align-items: center;
+    gap: 16px; /* optional, for spacing between links */
+}
 .right {
     display: flex;
     align-items: center;
-    gap: 8px; /* optional, for spacing between links */
+    gap: 10px; /* optional, for spacing between links */
 }
 
 .center {
