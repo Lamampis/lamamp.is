@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/yuin/goldmark"
@@ -29,6 +30,8 @@ const guestbookPageSize = 7
 
 var templates *template.Template
 var db *sql.DB
+var visitorCount int
+var visitorCountMutex sync.Mutex
 
 // --- Data Types ---
 type PageData struct {
@@ -445,7 +448,7 @@ func generatePagination(currentPage, totalItems, pageSize int) template.HTML {
 	return template.HTML(buf.String())
 }
 
-// generateUserID creates a new unique, anonymous ID for a user.
+// --- Middleware ---
 func generateUserID() string {
 	b := make([]byte, 16)
 	rand.Read(b)
@@ -453,8 +456,6 @@ func generateUserID() string {
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {
-	// A map for quick lookup of file extensions to be ignored.
-	// You can add more extensions here as needed.
 	ignoredExtensions := map[string]struct{}{
 		".jpg":  {},
 		".jpeg": {},
@@ -462,28 +463,24 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		".gif":  {},
 		".svg":  {},
 		".ico":  {},
-		".css":  {}, // Added CSS files as they are also static assets.
-		".js":   {}, // Added JS files.
+		".css":  {},
+		".js":   {},
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get the file extension from the request URL path.
 		ext := filepath.Ext(r.URL.Path)
-		// Check if the request is a GET for a file with an ignored extension.
 		if r.Method == "GET" {
 			if _, ok := ignoredExtensions[ext]; ok {
-				// Don't log this request, just pass it to the next handler.
 				next.ServeHTTP(w, r)
 				return
 			}
 		}
 
 		var userID string
+		isNewUser := false
 		cookie, err := r.Cookie("user_id")
-		if err == nil {
-			userID = cookie.Value
-		}
-		if userID == "" {
+		if err != nil {
+			isNewUser = true
 			userID = generateUserID()
 			http.SetCookie(w, &http.Cookie{
 				Name:     "user_id",
@@ -494,8 +491,19 @@ func loggingMiddleware(next http.Handler) http.Handler {
 				SameSite: http.SameSiteLaxMode,
 				MaxAge:   86400 * 365 * 10,
 			})
+		} else {
+			userID = cookie.Value
 		}
-		log.Printf("[%s] %s %s", userID, r.Method, r.URL.Path)
+
+		if isNewUser {
+			visitorCountMutex.Lock()
+			visitorCount++
+			log.Printf("NEW VISITOR [%s] Total Visitors: %d", userID, visitorCount)
+			visitorCountMutex.Unlock()
+		} else {
+			log.Printf("EXISTING VISITOR [%s] %s %s", userID, r.Method, r.URL.Path)
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }
