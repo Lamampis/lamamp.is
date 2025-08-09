@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"database/sql"
+	"encoding/base64"
 	"flag"
 	"html"
 	"html/template"
@@ -443,10 +445,37 @@ func generatePagination(currentPage, totalItems, pageSize int) template.HTML {
 	return template.HTML(buf.String())
 }
 
-// --- Middleware ---
+// generateUserID creates a new unique, anonymous ID for a user.
+func generateUserID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return base64.URLEncoding.EncodeToString(b)
+}
+
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Printf("[%s] %s", r.Method, r.URL.Path)
+		// Try to get the existing user ID from the cookie.
+		var userID string
+		cookie, err := r.Cookie("user_id")
+		if err == nil {
+			userID = cookie.Value
+		}
+
+		// If no user ID exists, generate a new one and set it as a cookie.
+		if userID == "" {
+			userID = generateUserID()
+			http.SetCookie(w, &http.Cookie{
+				Name:     "user_id",
+				Value:    userID,
+				Path:     "/",
+				HttpOnly: true,
+				Secure:   true, // Set to false for localhost testing
+				SameSite: http.SameSiteLaxMode,
+				MaxAge:   86400 * 365 * 10, // Expires in 10 years
+			})
+		}
+
+		log.Printf("[%s] %s %s", userID, r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
 }
