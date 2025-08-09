@@ -27,6 +27,7 @@ const guestbookPageSize = 7
 
 var templates *template.Template
 var db *sql.DB
+var contentDb *sql.DB // New database connection for static content
 
 // --- Data Types ---
 type PageData struct {
@@ -181,8 +182,9 @@ func loadMarkdownFiles() ([]MarkdownMeta, error) {
 }
 
 // --- DB ---
-func connectDB() *sql.DB {
-	db, err := sql.Open("sqlite", "./site.db")
+// Modified connectDB to take a database file path
+func connectDB(dbPath string) *sql.DB {
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -193,7 +195,8 @@ func connectDB() *sql.DB {
 }
 
 func getRandomQuote() string {
-	row := db.QueryRow(`SELECT text FROM quotes ORDER BY RANDOM() LIMIT 1`)
+	// Use contentDb for quotes
+	row := contentDb.QueryRow(`SELECT text FROM quotes ORDER BY RANDOM() LIMIT 1`)
 	var quote string
 	if err := row.Scan(&quote); err != nil {
 		return "Error loading quote."
@@ -202,6 +205,7 @@ func getRandomQuote() string {
 }
 
 func loadGuestbookEntries(limit, offset int) ([]GuestbookEntry, error) {
+	// Use db for guestbook entries
 	rows, err := db.Query(`SELECT name, message, timestamp FROM guestbook_entries ORDER BY timestamp DESC LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, err
@@ -218,7 +222,8 @@ func loadGuestbookEntries(limit, offset int) ([]GuestbookEntry, error) {
 }
 
 func loadAnimeRankings() ([]Anime, error) {
-	rows, err := db.Query(`SELECT rank, title, image_url, tier, comments FROM anime_rankings ORDER BY rank ASC`)
+	// Use contentDb for anime rankings
+	rows, err := contentDb.Query(`SELECT rank, title, image_url, tier, comments FROM anime_rankings ORDER BY rank ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -235,6 +240,7 @@ func loadAnimeRankings() ([]Anime, error) {
 }
 
 func getGuestbookEntryCount() int {
+	// Use db for guestbook count
 	var count int
 	_ = db.QueryRow(`SELECT COUNT(*) FROM guestbook_entries`).Scan(&count)
 	return count
@@ -555,8 +561,11 @@ func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	templates = loadTemplates()
-	db = connectDB()
+	// Two separate database connections
+	db = connectDB("./comments.db")
+	contentDb = connectDB("./content.db")
 	defer db.Close()
+	defer contentDb.Close()
 
 	mux := http.NewServeMux()
 	registerRoutes(mux)
