@@ -453,15 +453,36 @@ func generateUserID() string {
 }
 
 func loggingMiddleware(next http.Handler) http.Handler {
+	// A map for quick lookup of file extensions to be ignored.
+	// You can add more extensions here as needed.
+	ignoredExtensions := map[string]struct{}{
+		".jpg":  {},
+		".jpeg": {},
+		".png":  {},
+		".gif":  {},
+		".svg":  {},
+		".ico":  {},
+		".css":  {}, // Added CSS files as they are also static assets.
+		".js":   {}, // Added JS files.
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Try to get the existing user ID from the cookie.
+		// Get the file extension from the request URL path.
+		ext := filepath.Ext(r.URL.Path)
+		// Check if the request is a GET for a file with an ignored extension.
+		if r.Method == "GET" {
+			if _, ok := ignoredExtensions[ext]; ok {
+				// Don't log this request, just pass it to the next handler.
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
+
 		var userID string
 		cookie, err := r.Cookie("user_id")
 		if err == nil {
 			userID = cookie.Value
 		}
-
-		// If no user ID exists, generate a new one and set it as a cookie.
 		if userID == "" {
 			userID = generateUserID()
 			http.SetCookie(w, &http.Cookie{
@@ -469,12 +490,11 @@ func loggingMiddleware(next http.Handler) http.Handler {
 				Value:    userID,
 				Path:     "/",
 				HttpOnly: true,
-				Secure:   true, // Set to false for localhost testing
+				Secure:   true,
 				SameSite: http.SameSiteLaxMode,
-				MaxAge:   86400 * 365 * 10, // Expires in 10 years
+				MaxAge:   86400 * 365 * 10,
 			})
 		}
-
 		log.Printf("[%s] %s %s", userID, r.Method, r.URL.Path)
 		next.ServeHTTP(w, r)
 	})
