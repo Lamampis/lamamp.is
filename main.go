@@ -457,14 +457,15 @@ func generateUserID() string {
 
 func loggingMiddleware(next http.Handler) http.Handler {
 	ignoredExtensions := map[string]struct{}{
-		".jpg":  {},
-		".jpeg": {},
-		".png":  {},
-		".gif":  {},
-		".svg":  {},
-		".ico":  {},
-		".css":  {},
-		".js":   {},
+		".jpg":   {},
+		".jpeg":  {},
+		".woff2": {},
+		".png":   {},
+		".gif":   {},
+		".svg":   {},
+		".ico":   {},
+		".css":   {},
+		".js":    {},
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -501,7 +502,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 			log.Printf("NEW VISITOR [%s] Total Visitors: %d", userID, visitorCount)
 			visitorCountMutex.Unlock()
 		} else {
-			log.Printf("EXISTING VISITOR [%s] %s %s", userID, r.Method, r.URL.Path)
+			log.Printf("[%s] %s %s", userID, r.Method, r.URL.Path)
 		}
 
 		next.ServeHTTP(w, r)
