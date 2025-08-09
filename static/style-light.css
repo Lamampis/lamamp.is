@@ -32,6 +32,7 @@
     align-items: center;
     padding: 6px;
     margin: 0px;
+    flex-wrap: wrap;
 }
 
 .left,
@@ -82,15 +83,15 @@ nav {
     word-spacing: 8px;
 }
 
-.notextdec {
-    text-decoration: none;
-}
 nav a {
     color: var(--primary);
     text-decoration: none;
 }
 nav a:hover {
     color: var(--gray);
+    text-decoration: none;
+}
+.notextdec {
     text-decoration: none;
 }
 .no-underline {
