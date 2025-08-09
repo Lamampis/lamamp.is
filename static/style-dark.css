@@ -9,7 +9,7 @@
 .welcome-image {
     display: block;
     margin: 0 auto;
-    border: 2px solid white;
+    border: 1px solid white;
     filter: invert(0%);
     max-width: 360px;
     width: 100%;
@@ -37,12 +37,12 @@
 .left {
     display: flex;
     align-items: center;
-    gap: 14px; /* optional, for spacing between links */
+    gap: 14px;
 }
 .right {
     display: flex;
     align-items: center;
-    gap: 10px; /* optional, for spacing between links */
+    gap: 10px;
 }
 
 .center {
@@ -67,7 +67,7 @@ body {
 img {
     display: block;
     margin: 0 auto;
-    border: 2px solid var(--secondary);
+    border: 1px solid var(--secondary);
     max-width: 400px;
     width: 100%;
     height: auto;
@@ -81,7 +81,6 @@ nav {
     color: var(--primary);
     background-size: 100% 100%;
     background-repeat: no-repeat;
-    /* Removed padding from nav to use the container's padding for layout */
     z-index: 10;
     position: relative;
 }
@@ -89,10 +88,10 @@ nav {
 nav a {
     color: var(--primary);
     text-decoration: none;
-    display: flex; /* Change to flexbox */
-    align-items: center; /* Center items vertically */
-    line-height: normal; /* Reset line-height to default */
-    gap: 0.5em; /* Add a small gap between text and icons if they are inside the same link */
+    display: flex;
+    align-items: center;
+    line-height: normal;
+    gap: 0.5em;
 }
 .nav-text {
     display: inline-flex;
@@ -106,10 +105,9 @@ nav a:hover {
     display: flex;
     cursor: pointer;
     align-items: center;
-    line-height: 0; /* Keep this to avoid any extra line-height, if necessary */
+    line-height: 0;
 }
 
-/* The rest of the theme toggle CSS remains the same */
 .theme-toggle input {
     display: none;
 }
@@ -125,14 +123,12 @@ nav a:hover {
 .theme-toggle input:checked + .icon-container .dark-icon {
     display: none;
 }
-/* ... etc. */
 
-/* Container for the whole navigation bar */
 .container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px; /* Use the container padding for consistent spacing */
+    padding: 6px;
     margin: 0px;
 }
 .notextdec {
@@ -175,7 +171,7 @@ main {
     background-color: var(--primary);
     color: var(--secondary);
     padding: 6% 10%;
-    border: 2px solid var(--secondary);
+    border: 1px solid var(--secondary);
     z-index: 10;
     position: relative;
     overflow-x: hidden;
@@ -199,7 +195,7 @@ hr {
     box-sizing: border-box;
     font-family: var(--font-family-main);
     font-size: var(--font-size);
-    border-width: 2px 2px 2px 2px;
+    border-width: 1px 1px 1px 1px;
     border-style: solid;
     border-color: var(--secondary);
     outline: none;
@@ -215,7 +211,7 @@ hr {
 .guestbook-form textarea {
     background-color: var(--primary);
     color: var(--secondary);
-    border: 2px solid var(--gray);
+    border: 1px solid var(--gray);
     padding: 6px;
     width: 100%;
     margin-bottom: 10px;
@@ -233,7 +229,7 @@ hr {
 .guestbook-form button {
     background-color: var(--primary);
     color: var(--secondary);
-    border: 2px solid var(--secondary);
+    border: 1px solid var(--secondary);
     padding: 6px;
     cursor: pointer;
     font-family: var(--font-family-main);
@@ -255,7 +251,7 @@ hr {
 .collapsible {
     background-color: var(--primary);
     box-sizing: border-box;
-    border: 2px solid var(--secondary);
+    border: 1px solid var(--secondary);
     width: 150px;
     color: var(--secondary);
     cursor: pointer;
@@ -269,7 +265,7 @@ details[open] .collapsible,
 .collapsible:hover {
     background-color: var(--secondary);
     box-sizing: border-box;
-    border: 2px solid var(--secondary);
+    border: 1px solid var(--secondary);
     width: 150px;
     color: var(--primary);
     cursor: pointer;
@@ -279,7 +275,7 @@ details[open] .collapsible,
     outline: none;
 }
 details[closed] {
-    border: 2px solid var(--secondary);
+    border: 1px solid var(--secondary);
 }
 
 /* =======================
@@ -294,7 +290,7 @@ details[closed] {
 }
 
 .theme-toggle input:checked + .icon-container .light-icon {
-    display: block; /* or inline-block, flex, grid */
+    display: block;
 }
 
 .theme-toggle input:checked + .icon-container .dark-icon {
@@ -308,7 +304,7 @@ details[closed] {
 table,
 th,
 td {
-    border: 2px solid var(--gray);
+    border: 1px solid var(--gray);
     border-collapse: collapse;
     background-color: var(--primary);
     color: var(--secondary);
@@ -327,7 +323,7 @@ ul {
 
 /* Input box */
 .search-form input[type="text"] {
-    border: 2px solid var(--secondary);
+    border: 1px solid var(--secondary);
     flex: 1;
     padding: 8px 14px;
     font-size: var(--font-size);
@@ -336,7 +332,7 @@ ul {
 }
 
 .search-form input[type="text"]:focus {
-    border: 2px solid var(--secondary);
+    border: 1px solid var(--secondary);
     outline: none;
     padding: 8px 14px;
 }
@@ -345,7 +341,7 @@ ul {
 .search-form button {
     background-color: var(--primary);
     color: var(--secondary);
-    border-width: 2px 2px 2px 2px;
+    border-width: 1px 1px 1px 1px;
     border-style: solid;
     border-color: var(--secondary);
     border-left: 0px;
