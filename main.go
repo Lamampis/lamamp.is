@@ -583,6 +583,16 @@ func runAutocert(handler http.Handler) {
 func main() {
 	prod := flag.Bool("prod", false, "Run in production mode")
 	flag.Parse()
+
+	// --- Log to a file ---
+	logFile, err := os.OpenFile("access.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatalf("Error opening log file: %v", err)
+	}
+	defer logFile.Close()
+	log.SetOutput(logFile)
+	log.SetFlags(log.LstdFlags | log.Lshortfile) // Optional: Add line numbers for debugging
+
 	templates = loadTemplates()
 	db = connectDB()
 	defer db.Close()
