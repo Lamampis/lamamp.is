@@ -38,7 +38,7 @@
 .right {
     display: flex;
     align-items: center;
-    gap: 1em; /* optional, for spacing between links */
+    gap: 8px; /* optional, for spacing between links */
 }
 
 .center {
