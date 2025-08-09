@@ -336,7 +336,11 @@ func generateCSRFToken() string {
 	return base64.StdEncoding.EncodeToString(b)
 }
 
-func setCSRFToken(w http.ResponseWriter) string {
+func setCSRFToken(w http.ResponseWriter, r *http.Request) string {
+	if cookie, err := r.Cookie("csrf_token"); err == nil {
+		return cookie.Value
+	}
+
 	token := generateCSRFToken()
 	http.SetCookie(w, &http.Cookie{
 		Name:     "csrf_token",
