@@ -32,13 +32,13 @@
     align-items: center;
     padding: 6px;
     margin: 0px;
-    flex-wrap: wrap;
 }
 
 .left,
 .right {
     display: flex;
-    gap: 1rem; /* optional, for spacing between links */
+    align-items: center;
+    gap: 1em; /* optional, for spacing between links */
 }
 
 .center {
@@ -77,19 +77,59 @@ nav {
     color: var(--primary);
     background-size: 100% 100%;
     background-repeat: no-repeat;
-    padding: 0.9ex;
+    /* Removed padding from nav to use the container's padding for layout */
     z-index: 10;
     position: relative;
-    word-spacing: 9px;
 }
 
 nav a {
     color: var(--primary);
     text-decoration: none;
+    display: flex; /* Change to flexbox */
+    align-items: center; /* Center items vertically */
+    line-height: normal; /* Reset line-height to default */
+    gap: 0.5em; /* Add a small gap between text and icons if they are inside the same link */
+}
+.nav-text {
+    display: inline-flex;
+    align-items: center;
 }
 nav a:hover {
     color: var(--gray);
     text-decoration: none;
+}
+.theme-toggle .icon-container {
+    display: flex;
+    cursor: pointer;
+    align-items: center;
+    line-height: 0; /* Keep this to avoid any extra line-height, if necessary */
+}
+
+/* The rest of the theme toggle CSS remains the same */
+.theme-toggle input {
+    display: none;
+}
+.theme-toggle .light-icon {
+    display: none;
+}
+.theme-toggle .dark-icon {
+    display: block;
+}
+.theme-toggle input:checked + .icon-container .light-icon {
+    display: block;
+}
+.theme-toggle input:checked + .icon-container .dark-icon {
+    display: none;
+}
+/* ... etc. */
+
+/* Container for the whole navigation bar */
+.container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px; /* Use the container padding for consistent spacing */
+    margin: 0px;
 }
 .notextdec {
     text-decoration: none;
@@ -245,15 +285,16 @@ details[closed] {
     display: none;
 }
 
-.theme-toggle span::before {
-    content: "[dark]";
-    cursor: pointer;
-    color: var(--primary);
+.icon-container .light-icon {
+    display: none;
 }
 
-.theme-toggle input:checked + span::before {
-    content: "[light]";
-    color: var(--primary);
+.theme-toggle input:checked + .icon-container .light-icon {
+    display: block; /* or inline-block, flex, grid */
+}
+
+.theme-toggle input:checked + .icon-container .dark-icon {
+    display: none;
 }
 
 .theme-toggle span:hover::before,
