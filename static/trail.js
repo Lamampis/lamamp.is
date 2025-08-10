@@ -119,8 +119,8 @@ function sparkle() {
     for (let c = 0; c < sparkles; c++) {
       if (!starv[c] && sparklesCreated < maxSparklesPerCycle) {
         // Random Offset
-        const offsetX = x + (Math.random() - 0.5) * 7;
-        const offsetY = y + (Math.random() - 0.5) * 7;
+        const offsetX = x + (Math.random() - 0.5) * 5;
+        const offsetY = y + (Math.random() - 0.5) * 5;
 
         star[c].style.left = `${(starx[c] = offsetX)}px`;
         star[c].style.top = `${(stary[c] = offsetY + 1)}px`;
