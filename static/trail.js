@@ -1,5 +1,5 @@
-let colour = "random"; // "random" can be replaced with any valid colour e.g., "red"...
-const sparkles = 150; // increase or decrease for number of sparkles falling
+let colour = "random";
+const sparkles = 170; // Max sparkles on screen
 
 let [x, ox, y, oy] = [400, 400, 300, 300];
 let [swide, shigh, sleft, sdown] = [800, 600, 0, 0];
@@ -75,7 +75,7 @@ function animate() {
       temp1.left = `${x}px`;
     }
   }
-  setTimeout(animate, 10);
+  setTimeout(animate, 100);
 }
 
 window.onload = function () {
@@ -83,7 +83,7 @@ window.onload = function () {
     for (let i = 0; i < sparkles; i++) {
       const tinyDiv = createDiv(3, 3);
       tinyDiv.style.visibility = "hidden";
-      tinyDiv.style.zIndex = "1"; // Ensure the trails are below the div elements
+      tinyDiv.style.zIndex = "1";
       document.body.appendChild((tiny[i] = tinyDiv));
       starv[i] = 0;
       tinyv[i] = 0;
@@ -91,7 +91,7 @@ window.onload = function () {
       const starDiv = createDiv(5, 5);
       starDiv.style.backgroundColor = "transparent";
       starDiv.style.visibility = "hidden";
-      starDiv.style.zIndex = "1"; // Ensure the trails are below the div elements
+      starDiv.style.zIndex = "1";
 
       const rlef = createDiv(1, 5);
       const rdow = createDiv(5, 1);
@@ -113,17 +113,24 @@ function sparkle() {
   if (Math.abs(x - ox) > 1 || Math.abs(y - oy) > 1) {
     ox = x;
     oy = y;
+    let sparklesCreated = 0;
+    const maxSparklesPerCycle = 2; // Amount
+
     for (let c = 0; c < sparkles; c++) {
-      if (!starv[c]) {
-        star[c].style.left = `${(starx[c] = x)}px`;
-        star[c].style.top = `${(stary[c] = y + 1)}px`;
+      if (!starv[c] && sparklesCreated < maxSparklesPerCycle) {
+        // Random Offset
+        const offsetX = x + (Math.random() - 0.5) * 7;
+        const offsetY = y + (Math.random() - 0.5) * 7;
+
+        star[c].style.left = `${(starx[c] = offsetX)}px`;
+        star[c].style.top = `${(stary[c] = offsetY + 1)}px`;
         star[c].style.clip = "rect(0px, 5px, 5px, 0px)";
         const colourToSet = colour === "random" ? newColour() : colour;
         star[c].childNodes[0].style.backgroundColor = colourToSet;
         star[c].childNodes[1].style.backgroundColor = colourToSet;
         star[c].style.visibility = "visible";
-        starv[c] = 50;
-        break;
+        starv[c] = 50; // Lifetime
+        sparklesCreated++;
       }
     }
   }
@@ -131,7 +138,7 @@ function sparkle() {
     if (starv[c]) updateStar(c);
     if (tinyv[c]) updateTiny(c);
   }
-  setTimeout(sparkle, 37); // Speed
+  setTimeout(sparkle, 27); // Speed
 }
 
 function updateStar(i) {
@@ -197,10 +204,10 @@ function createDiv(height, width) {
   div.style.height = `${height}px`;
   div.style.width = `${width}px`;
   div.style.overflow = "hidden";
-  div.style.padding = "0"; // Ensure no padding affects the size
-  div.style.margin = "0"; // Ensure no margin affects the size
-  div.style.border = "none"; // Ensure no border affects the size
-  div.style.boxSizing = "content-box"; // Ensure no additional sizing interference
+  div.style.padding = "0";
+  div.style.margin = "0";
+  div.style.border = "none";
+  div.style.boxSizing = "content-box";
   return div;
 }
 
