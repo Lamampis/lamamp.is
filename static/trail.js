@@ -138,7 +138,7 @@ function sparkle() {
     if (starv[c]) updateStar(c);
     if (tinyv[c]) updateTiny(c);
   }
-  setTimeout(sparkle, 16); // Speed
+  setTimeout(sparkle, 25); // Speed
 }
 
 function updateStar(i) {
