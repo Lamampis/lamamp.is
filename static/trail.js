@@ -114,7 +114,7 @@ function sparkle() {
     ox = x;
     oy = y;
     let sparklesCreated = 0;
-    const maxSparklesPerCycle = 2; // Amount
+    const maxSparklesPerCycle = 1; // Amount
 
     for (let c = 0; c < sparkles; c++) {
       if (!starv[c] && sparklesCreated < maxSparklesPerCycle) {
@@ -129,7 +129,7 @@ function sparkle() {
         star[c].childNodes[0].style.backgroundColor = colourToSet;
         star[c].childNodes[1].style.backgroundColor = colourToSet;
         star[c].style.visibility = "visible";
-        starv[c] = 50; // Lifetime
+        starv[c] = 100; // Lifetime
         sparklesCreated++;
       }
     }
@@ -138,7 +138,7 @@ function sparkle() {
     if (starv[c]) updateStar(c);
     if (tinyv[c]) updateTiny(c);
   }
-  setTimeout(sparkle, 27); // Speed
+  setTimeout(sparkle, 15); // Speed
 }
 
 function updateStar(i) {
