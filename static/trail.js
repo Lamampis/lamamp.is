@@ -1,5 +1,5 @@
 let colour = "random";
-const sparkles = 170; // Max sparkles on screen
+const sparkles = 80; // Max sparkles on screen
 
 let [x, ox, y, oy] = [400, 400, 300, 300];
 let [swide, shigh, sleft, sdown] = [800, 600, 0, 0];
@@ -129,7 +129,7 @@ function sparkle() {
         star[c].childNodes[0].style.backgroundColor = colourToSet;
         star[c].childNodes[1].style.backgroundColor = colourToSet;
         star[c].style.visibility = "visible";
-        starv[c] = 100; // Lifetime
+        starv[c] = 80; // Lifetime
         sparklesCreated++;
       }
     }
@@ -138,7 +138,7 @@ function sparkle() {
     if (starv[c]) updateStar(c);
     if (tinyv[c]) updateTiny(c);
   }
-  setTimeout(sparkle, 15); // Speed
+  setTimeout(sparkle, 20); // Speed
 }
 
 function updateStar(i) {
