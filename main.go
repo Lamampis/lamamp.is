@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -26,11 +25,12 @@ import (
 
 const guestbookPageSize = 7
 
-var templates *template.Template
-var db *sql.DB
-var contentDb *sql.DB // New database connection for static content
+var (
+	templates *template.Template
+	db        *sql.DB
+	contentDb *sql.DB
+)
 
-// --- Data Types ---
 type PageData struct {
 	Title   string
 	Content template.HTML
@@ -39,606 +39,406 @@ type PageData struct {
 }
 
 type GuestbookEntry struct {
-	Name      string
-	Message   string
-	Timestamp time.Time
+	Name, Message string
+	Timestamp     time.Time
 }
 
 type GardenPage struct {
-	Slug    string
-	Title   string
-	Created time.Time
-	ModTime time.Time
-	Tags    []string
+	Slug, Title string
+	Created     time.Time
+	ModTime     time.Time
+	Tags        []string
 }
 
 type Anime struct {
-	Rank     int
-	Title    string
-	ImageURL string
-	Tier     string
-	Comments string
-}
-
-type SearchResult struct {
-	Title   string
-	URL     string
-	Snippet string
-	Type    string
+	Rank                            int
+	Title, ImageURL, Tier, Comments string
 }
 
 type MarkdownMeta struct {
-	Slug    string
-	Title   string
-	Created time.Time
-	ModTime time.Time
-	HTML    template.HTML
+	Slug, Title      string
+	Created, ModTime time.Time
+	HTML             template.HTML
 }
 
-// --- Theme ---
 func getTheme(r *http.Request) string {
-	theme := "light"
 	if cookie, err := r.Cookie("theme"); err == nil {
-		theme = cookie.Value
+		return cookie.Value
 	}
-	return theme
+	return "dark"
 }
 
-func setThemeHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		theme := r.FormValue("theme")
-		if theme != "light" && theme != "dark" {
-			theme = "dark"
-		}
-		http.SetCookie(w, &http.Cookie{
-			Name:     "theme",
-			Value:    theme,
-			Path:     "/",
-			HttpOnly: true,
-			Secure:   true,
-			SameSite: http.SameSiteLaxMode,
-			MaxAge:   86400 * 30,
-		})
-	}
-	http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
-}
-
-// --- Markdown ---
-func renderMarkdownFile(path string) (template.HTML, string, time.Time, time.Time, error) {
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return "", "", time.Time{}, time.Time{}, err
-	}
-
-	info, err := os.Stat(path)
-	if err != nil {
-		return "", "", time.Time{}, time.Time{}, err
-	}
-	modTime := info.ModTime()
-	created := time.Time{}
-
-	title := ""
-	body := content
-
-	contentStr := string(content)
-	if strings.HasPrefix(contentStr, "---") {
-		parts := strings.SplitN(contentStr, "---", 3)
-		if len(parts) >= 3 {
-			meta := parts[1]
-			body = []byte(parts[2])
-			for _, line := range strings.Split(meta, "\n") {
-				line = strings.TrimSpace(line)
-				if after, found := strings.CutPrefix(line, "title:"); found {
-					title = strings.TrimSpace(after)
-				} else if after, found := strings.CutPrefix(line, "created:"); found {
-					cs := strings.TrimSpace(after)
-					formats := []string{
-						time.RFC3339, "2006-01-02", "02-01-2006", "02/01/2006", "2 Jan 2006",
-					}
-					for _, layout := range formats {
-						if t, err := time.Parse(layout, cs); err == nil {
-							created = t
-							break
-						}
-					}
-				}
-			}
-		}
-	}
-	if created.IsZero() {
-		created = modTime
-	}
-
-	var buf bytes.Buffer
-	if err := goldmark.Convert(body, &buf); err != nil {
-		return "", "", time.Time{}, time.Time{}, err
-	}
-	return template.HTML(buf.String()), title, created, modTime, nil
-}
-
-func loadMarkdownFiles() ([]MarkdownMeta, error) {
-	files, err := filepath.Glob("garden/*.md")
-	if err != nil {
-		return nil, err
-	}
-	var result []MarkdownMeta
-	for _, f := range files {
-		html, title, created, modTime, err := renderMarkdownFile(f)
-		if err != nil {
-			continue
-		}
-		slug := strings.TrimSuffix(filepath.Base(f), ".md")
-		if title == "" {
-			title = cases.Title(language.English).String(slug)
-		}
-		result = append(result, MarkdownMeta{
-			Slug:    slug,
-			Title:   title,
-			Created: created,
-			ModTime: modTime,
-			HTML:    html,
-		})
-	}
-	return result, nil
-}
-
-// --- DB ---
-// Modified connectDB to take a database file path
-func connectDB(dbPath string) *sql.DB {
-	db, err := sql.Open("sqlite", dbPath)
+func initDB(path string, isComments bool) *sql.DB {
+	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)
 	}
 
-	if strings.HasSuffix(dbPath, "comments.db") {
-		_, err := db.Exec(`
-			CREATE TABLE IF NOT EXISTS guestbook_entries (
+	var queries []string
+	if isComments {
+		queries = []string{
+			`CREATE TABLE IF NOT EXISTS guestbook_entries (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				name TEXT NOT NULL,
 				message TEXT NOT NULL,
 				timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-			)
-		`)
-		if err != nil {
-			log.Fatalf("Error creating guestbook_entries table: %v", err)
+			)`,
 		}
-	}
-
-	if strings.HasSuffix(dbPath, "content.db") {
-		_, err := db.Exec(`
-			CREATE TABLE IF NOT EXISTS quotes (
+	} else {
+		queries = []string{
+			`CREATE TABLE IF NOT EXISTS quotes (
 				id INTEGER PRIMARY KEY AUTOINCREMENT,
 				text TEXT NOT NULL
-			)
-		`)
-		if err != nil {
-			log.Fatalf("Error creating quotes table: %v", err)
-		}
-
-		_, err = db.Exec(`
-			CREATE TABLE IF NOT EXISTS anime_rankings (
+			)`,
+			`CREATE TABLE IF NOT EXISTS anime_rankings (
 				rank INTEGER PRIMARY KEY,
 				title TEXT NOT NULL,
 				image_url TEXT,
 				tier TEXT,
 				comments TEXT
-			)
-		`)
-		if err != nil {
-			log.Fatalf("Error creating anime_rankings table: %v", err)
+			)`,
+		}
+	}
+
+	for _, query := range queries {
+		if _, err := db.Exec(query); err != nil {
+			log.Fatal(err)
 		}
 	}
 
 	return db
 }
 
-func getRandomQuote() string {
-	// Use contentDb for quotes
-	row := contentDb.QueryRow(`SELECT text FROM quotes ORDER BY RANDOM() LIMIT 1`)
-	var quote string
-	if err := row.Scan(&quote); err != nil {
-		return "Error loading quote."
+func parseMarkdown(path string) (template.HTML, string, time.Time, time.Time, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return "", "", time.Time{}, time.Time{}, err
 	}
+
+	info, _ := os.Stat(path)
+	modTime := info.ModTime()
+	created := modTime
+	title := ""
+	body := content
+
+	if strings.HasPrefix(string(content), "---") {
+		if parts := strings.SplitN(string(content), "---", 3); len(parts) >= 3 {
+			body = []byte(parts[2])
+
+			for _, line := range strings.Split(parts[1], "\n") {
+				line = strings.TrimSpace(line)
+
+				if after, found := strings.CutPrefix(line, "title:"); found {
+					title = strings.TrimSpace(after)
+				} else if after, found := strings.CutPrefix(line, "created:"); found {
+					if t, err := time.Parse("2006-01-02", strings.TrimSpace(after)); err == nil {
+						created = t
+					}
+				}
+
+			}
+		}
+	}
+
+	var buf bytes.Buffer
+	goldmark.Convert(body, &buf)
+
+	return template.HTML(buf.String()), title, created, modTime, nil
+}
+
+func getRandomQuote() string {
+	var quote string
+	contentDb.QueryRow(`SELECT text FROM quotes ORDER BY RANDOM() LIMIT 1`).Scan(&quote)
 	return quote
 }
 
-func loadGuestbookEntries(limit, offset int) ([]GuestbookEntry, error) {
-	// Use db for guestbook entries
-	rows, err := db.Query(`SELECT name, message, timestamp FROM guestbook_entries ORDER BY timestamp DESC LIMIT ? OFFSET ?`, limit, offset)
-	if err != nil {
-		return nil, err
-	}
+func getGuestbookEntries(limit, offset int) []GuestbookEntry {
+	rows, _ := db.Query(`SELECT name, message, timestamp FROM guestbook_entries ORDER BY timestamp DESC LIMIT ? OFFSET ?`, limit, offset)
 	defer rows.Close()
+
 	var entries []GuestbookEntry
 	for rows.Next() {
 		var e GuestbookEntry
-		if err := rows.Scan(&e.Name, &e.Message, &e.Timestamp); err == nil {
+		if rows.Scan(&e.Name, &e.Message, &e.Timestamp) == nil {
 			entries = append(entries, e)
 		}
 	}
-	return entries, nil
+
+	return entries
 }
 
-func loadAnimeRankings() ([]Anime, error) {
-	// Use contentDb for anime rankings
-	rows, err := contentDb.Query(`SELECT rank, title, image_url, tier, comments FROM anime_rankings ORDER BY rank ASC`)
-	if err != nil {
-		return nil, err
-	}
+func getAnimeRankings() []Anime {
+	rows, _ := contentDb.Query(`SELECT rank, title, image_url, tier, comments FROM anime_rankings ORDER BY rank`)
 	defer rows.Close()
+
 	var list []Anime
 	for rows.Next() {
 		var a Anime
-		if err := rows.Scan(&a.Rank, &a.Title, &a.ImageURL, &a.Tier, &a.Comments); err != nil {
-			continue
+		if rows.Scan(&a.Rank, &a.Title, &a.ImageURL, &a.Tier, &a.Comments) == nil {
+			list = append(list, a)
 		}
-		list = append(list, a)
 	}
-	return list, nil
+
+	return list
 }
 
-func getGuestbookEntryCount() int {
-	// Use db for guestbook count
+func getGuestbookCount() int {
 	var count int
-	_ = db.QueryRow(`SELECT COUNT(*) FROM guestbook_entries`).Scan(&count)
+	db.QueryRow(`SELECT COUNT(*) FROM guestbook_entries`).Scan(&count)
 	return count
-}
-
-// --- HTML Helpers ---
-func stripHTML(s string) string {
-	re := regexp.MustCompile(`<[^>]*>`)
-	s = re.ReplaceAllString(s, " ")
-	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, " ")
-	return strings.TrimSpace(s)
-}
-
-func getSnippet(text, query string) string {
-	text = stripHTML(text)
-	if len(text) <= 200 {
-		return text
-	}
-	pos := strings.Index(strings.ToLower(text), strings.ToLower(query))
-	if pos == -1 {
-		return text[:200] + "..."
-	}
-	start := max(0, pos-100)
-	end := min(len(text), pos+100)
-	snippet := text[start:end]
-	if start > 0 {
-		snippet = "..." + snippet
-	}
-	if end < len(text) {
-		snippet += "..."
-	}
-	return snippet
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func renderSnippets(names []string, data map[string]any) (template.HTML, error) {
-	var buf bytes.Buffer
-	for _, name := range names {
-		if err := templates.ExecuteTemplate(&buf, name, data[name]); err != nil {
-			return "", err
-		}
-	}
-	return template.HTML(buf.String()), nil
-}
-
-func renderPage(w http.ResponseWriter, data PageData) {
-	_ = templates.ExecuteTemplate(w, "base", data)
 }
 
 func loadTemplates() *template.Template {
 	funcs := template.FuncMap{
-		"join": strings.Join,
-		"dateFormat": func(t time.Time) string {
-			return t.Format("02 Jan 2006")
-		},
+		"join":       strings.Join,
+		"dateFormat": func(t time.Time) string { return t.Format("02 Jan 2006") },
 	}
 
-	tmpl := template.Must(template.New("base").Funcs(funcs).Parse(`{{ define "base" }}{{ template "header" . }}{{ .Content }}{{ template "footer" . }}{{ end }}`))
+	tmpl := template.Must(template.New("base").Funcs(funcs).Parse(
+		`{{ define "base" }}{{ template "header" . }}{{ .Content }}{{ template "footer" . }}{{ end }}`))
 
-	return template.Must(tmpl.ParseFiles(
-		"templates/base/header.html",
-		"templates/base/footer.html",
-		"templates/base/404.html",
-		"templates/home/welcome.html",
-		"templates/home/quotes.html",
-		"templates/home/introduction.html",
-		"templates/home/latest_posts.html",
-		"templates/home/guestbook.html",
-		"templates/home/guest_comments.html",
-		"templates/home/searchbar.html",
-		"templates/garden/garden_main.html",
-		"templates/garden/return.html",
-		"templates/base/search_results.html",
-		"templates/anime/anime_table.html",
-		"templates/cyber/cyber.html",
-		"templates/about/about.html",
-	))
+	return template.Must(tmpl.ParseGlob("templates/*/*.html"))
 }
 
-// --- Handlers ---
-func formHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Forbidden", http.StatusForbidden)
-		return
+func renderSnippets(names []string, data map[string]any) template.HTML {
+	var buf bytes.Buffer
+
+	for _, name := range names {
+		templates.ExecuteTemplate(&buf, name, data[name])
 	}
-	_ = r.ParseForm()
-	name := html.EscapeString(r.FormValue("name"))
-	if name == "" {
-		name = "Anonymous"
+
+	return template.HTML(buf.String())
+}
+
+func renderPage(w http.ResponseWriter, data PageData) {
+	templates.ExecuteTemplate(w, "base", data)
+}
+
+func pagination(page, total, size int) template.HTML {
+	totalPages := (total + size - 1) / size
+	if totalPages <= 1 {
+		return ""
 	}
-	message := html.EscapeString(r.FormValue("message"))
-	_, err := db.Exec(`INSERT INTO guestbook_entries (name, message) VALUES (?, ?)`, name, message)
-	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
+
+	var buf bytes.Buffer
+	buf.WriteString(`<div class="pagination">`)
+
+	for i := 1; i <= totalPages; i++ {
+		if i == page {
+			buf.WriteString(fmt.Sprintf(`>[<span class="current-page">%d</span>]< `, i))
+		} else {
+			buf.WriteString(fmt.Sprintf(`<a href="/?page=%d">[%d]</a> `, i, i))
+		}
 	}
-	http.Redirect(w, r, "/", http.StatusSeeOther)
+
+	buf.WriteString(`</div>`)
+	return template.HTML(buf.String())
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	page := 1
-	if p := r.URL.Query().Get("page"); p != "" {
-		if n, _ := strconv.Atoi(p); n > 0 {
-			page = n
-		}
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
 	}
-	theme := getTheme(r)
-	mdFiles, _ := loadMarkdownFiles()
-	sort.Slice(mdFiles, func(i, j int) bool { return mdFiles[i].Created.After(mdFiles[j].Created) })
 
+	// for latest posts
+	files, _ := filepath.Glob("garden/*.md")
 	var pages []GardenPage
-	for i, md := range mdFiles {
+
+	for i, f := range files {
 		if i >= 10 {
 			break
 		}
-		pages = append(pages, GardenPage{Slug: md.Slug, Title: md.Title, ModTime: md.Created})
-	}
-	entries, _ := loadGuestbookEntries(guestbookPageSize, (page-1)*guestbookPageSize)
-	totalEntries := getGuestbookEntryCount()
 
-	content, _ := renderSnippets([]string{
-		"welcome.html", "quotes.html", "searchbar.html", "introduction.html", "latest_posts.html", "guestbook.html", "guest_comments.html",
+		if _, title, created, _, _ := parseMarkdown(f); title != "" {
+			slug := strings.TrimSuffix(filepath.Base(f), ".md")
+			pages = append(pages, GardenPage{Slug: slug, Title: title, ModTime: created})
+		}
+	}
+
+	sort.Slice(pages, func(i, j int) bool { return pages[i].Created.After(pages[j].Created) })
+
+	entries := getGuestbookEntries(guestbookPageSize, (page-1)*guestbookPageSize)
+
+	content := renderSnippets([]string{
+		"welcome.html", "quotes.html", "introduction.html", "latest_posts.html", "guestbook.html", "guest_comments.html",
 	}, map[string]any{
 		"guest_comments.html": map[string]any{"Entries": entries},
 		"quotes.html":         map[string]any{"Quote": getRandomQuote()},
 		"latest_posts.html":   map[string]any{"Pages": pages},
 	})
-	content += generatePagination(page, totalEntries, guestbookPageSize)
 
-	renderPage(w, PageData{"Home", content, theme, time.Time{}})
+	content += pagination(page, getGuestbookCount(), guestbookPageSize)
+	renderPage(w, PageData{"Home", content, getTheme(r), time.Time{}})
 }
 
 func gardenHandler(w http.ResponseWriter, r *http.Request) {
-	theme := getTheme(r)
+	path := strings.TrimPrefix(r.URL.Path, "/garden")
+	path = strings.TrimPrefix(path, "/")
 
-	// Handle individual posts
-	if slug, found := strings.CutPrefix(r.URL.Path, "/garden/"); found && slug != "" {
-		if _, err := os.Stat(filepath.Join("garden", slug+".md")); err != nil {
-			http.NotFound(w, r)
-			return
-		}
+	if path == "" {
+		files, _ := filepath.Glob("garden/*.md")
+		var pages []GardenPage
 
-		html, title, created, modTime, _ := renderMarkdownFile(filepath.Join("garden", slug+".md"))
+		for _, f := range files {
+			if _, title, created, modTime, _ := parseMarkdown(f); title != "" {
+				slug := strings.TrimSuffix(filepath.Base(f), ".md")
+				if title == "" {
+					title = cases.Title(language.English).String(slug)
+				}
 
-		// Add date metadata to the top
-		dateInfo := template.HTML(fmt.Sprintf(`<div style="margin-bottom: 20px; color: #666; font-size: 0.9em;">Created: %s | Updated: %s</div>`,
-			created.Format("02-01-2006"), modTime.Format("02-01-2006")))
-
-		// Add return link at bottom
-		returnContent, _ := renderSnippets([]string{"return.html"}, map[string]any{})
-
-		// Combine all parts
-		html = dateInfo + html + template.HTML(returnContent)
-
-		renderPage(w, PageData{title, html, theme, modTime})
-		return
-	}
-
-	// Handle garden listing page
-	mdFiles, _ := loadMarkdownFiles()
-	var pages []GardenPage
-	for _, md := range mdFiles {
-		pages = append(pages, GardenPage{Slug: md.Slug, Title: md.Title, Created: md.Created, ModTime: md.ModTime})
-	}
-	content, _ := renderSnippets([]string{"garden_main.html"}, map[string]any{"garden_main.html": map[string]any{"Pages": pages}})
-	renderPage(w, PageData{"Garden", content, theme, time.Time{}})
-}
-
-func searchHandler(w http.ResponseWriter, r *http.Request) {
-	query := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q")))
-	if query == "" {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-	var results []SearchResult
-	mdFiles, _ := loadMarkdownFiles()
-	for _, md := range mdFiles {
-		if strings.Contains(strings.ToLower(md.Title), query) || strings.Contains(strings.ToLower(string(md.HTML)), query) {
-			results = append(results, SearchResult{md.Title, "/garden/" + md.Slug, getSnippet(string(md.HTML), query), "garden"})
-		}
-	}
-	if aboutContent, err := os.ReadFile("templates/about/about.html"); err == nil {
-		if text := stripHTML(string(aboutContent)); strings.Contains(strings.ToLower(text), query) {
-			results = append(results, SearchResult{"About", "/about", getSnippet(text, query), "page"})
-		}
-	}
-	if cyberContent, err := os.ReadFile("templates/cyber/cyber.html"); err == nil {
-		if text := stripHTML(string(cyberContent)); strings.Contains(strings.ToLower(text), query) {
-			results = append(results, SearchResult{"Cyber", "/cyber", getSnippet(text, query), "page"})
-		}
-	}
-	if animeList, err := loadAnimeRankings(); err == nil {
-		for _, a := range animeList {
-			if strings.Contains(strings.ToLower(a.Title), query) || strings.Contains(strings.ToLower(a.Comments), query) || strings.Contains(strings.ToLower(a.Tier), query) {
-				results = append(results, SearchResult{a.Title + " (Anime)", "/anilist", a.Comments, "anime"})
+				pages = append(pages, GardenPage{
+					Slug: slug, Title: title, Created: created, ModTime: modTime,
+				})
 			}
 		}
+
+		content := renderSnippets([]string{"garden_main.html"},
+			map[string]any{"garden_main.html": map[string]any{"Pages": pages}})
+		renderPage(w, PageData{"Garden", content, getTheme(r), time.Time{}})
+		return
 	}
-	content, _ := renderSnippets([]string{"search_results.html"}, map[string]any{"search_results.html": map[string]any{"Query": query, "Results": results, "Count": len(results)}})
-	renderPage(w, PageData{"Search Results", content, getTheme(r), time.Time{}})
+
+	if !strings.HasSuffix(path, ".md") {
+		path += ".md"
+	}
+	fullPath := filepath.Join("garden", path)
+
+	if _, err := os.Stat(fullPath); err != nil {
+		// Use custom 404 page instead of http.NotFound
+		w.WriteHeader(http.StatusNotFound)
+		content := renderSnippets([]string{"404.html"}, nil)
+		renderPage(w, PageData{"404", content, getTheme(r), time.Time{}})
+		return
+	}
+
+	html, title, created, modTime, _ := parseMarkdown(fullPath)
+	if title == "" {
+		title = cases.Title(language.English).String(strings.TrimSuffix(path, ".md"))
+	}
+
+	dateInfo := template.HTML(fmt.Sprintf(
+		`<div style="margin-bottom: 20px; color: #666; font-size: 0.9em;">Created: %s | Updated: %s</div>`,
+		created.Format("02-01-2006"), modTime.Format("02-01-2006")))
+
+	returnContent := renderSnippets([]string{"return.html"}, nil)
+	content := dateInfo + html + template.HTML(returnContent)
+	renderPage(w, PageData{title, content, getTheme(r), modTime})
 }
 
-// --- Pagination ---
-func generatePagination(currentPage, totalItems, pageSize int) template.HTML {
-	totalPages := (totalItems + pageSize - 1) / pageSize
-	if totalPages <= 1 {
-		return ""
-	}
-	var buf bytes.Buffer
-	buf.WriteString(`<div class="pagination">`)
-	for i := 1; i <= totalPages; i++ {
-		if i == currentPage {
-			buf.WriteString(`>[<span class="current-page">` + strconv.Itoa(i) + `</span>]< `)
-		} else {
-			buf.WriteString(`<a href="/?page=` + strconv.Itoa(i) + `">[` + strconv.Itoa(i) + `]</a> `)
+func mainHandler(w http.ResponseWriter, r *http.Request) {
+	path := strings.Trim(r.URL.Path, "/")
+
+	switch {
+	case path == "" || path == "home":
+		homeHandler(w, r)
+
+	case path == "garden" || strings.HasPrefix(r.URL.Path, "/garden/"):
+		gardenHandler(w, r)
+
+	case r.URL.Path == "/form" && r.Method == "POST":
+		name := html.EscapeString(r.FormValue("name"))
+		if name == "" {
+			name = "Anonymous"
 		}
+
+		message := html.EscapeString(r.FormValue("message"))
+		db.Exec(`INSERT INTO guestbook_entries (name, message) VALUES (?, ?)`, name, message)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+
+	case r.URL.Path == "/set-theme" && r.Method == "POST":
+		theme := r.FormValue("theme")
+		if theme != "light" && theme != "dark" {
+			theme = "dark"
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name: "theme", Value: theme, Path: "/", HttpOnly: true,
+			Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: 86400 * 30,
+		})
+		http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
+
+	case r.URL.Path == "/about":
+		content := renderSnippets([]string{"about.html"}, nil)
+		renderPage(w, PageData{"About", content, getTheme(r), time.Time{}})
+
+	case r.URL.Path == "/anilist":
+		content := renderSnippets([]string{"anime_table.html"},
+			map[string]any{"anime_table.html": getAnimeRankings()})
+		renderPage(w, PageData{"My Anime Rankings", content, getTheme(r), time.Time{}})
+
+	case r.URL.Path == "/cyber":
+		content := renderSnippets([]string{"cyber.html"}, nil)
+		renderPage(w, PageData{"Cyber", content, getTheme(r), time.Time{}})
+
+	case r.URL.Path == "/riddles":
+		content := renderSnippets([]string{"dark_coins.html", "return.html"}, nil)
+		renderPage(w, PageData{"Riddles", content, getTheme(r), time.Time{}})
+
+	case strings.HasPrefix(r.URL.Path, "/static/"):
+		http.StripPrefix("/static/", http.FileServer(http.Dir("static"))).ServeHTTP(w, r)
+
+	default:
+		content := renderSnippets([]string{"404.html"}, nil)
+		renderPage(w, PageData{"404", content, getTheme(r), time.Time{}})
 	}
-	buf.WriteString(`</div>`)
-	return template.HTML(buf.String())
 }
 
-// --- Middleware ---
-func loggingMiddleware(next http.Handler) http.Handler {
-	ignoredExtensions := map[string]struct{}{
-		".jpg":   {},
-		".woff2": {},
-		".jpeg":  {},
-		".png":   {},
-		".gif":   {},
-		".svg":   {},
-		".ico":   {},
-		".css":   {},
-		".js":    {},
+func loggedHandler(h http.HandlerFunc) http.Handler {
+	ignored := map[string]bool{
+		".jpg": true, ".jpeg": true, ".png": true, ".gif": true,
+		".css": true, ".js": true, ".woff2": true,
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ext := filepath.Ext(r.URL.Path)
-		if r.Method == "GET" {
-			if _, ok := ignoredExtensions[ext]; ok {
-				next.ServeHTTP(w, r)
-				return
-			}
+		if r.Method == "GET" && ignored[filepath.Ext(r.URL.Path)] {
+			h(w, r)
+			return
 		}
 
 		log.Printf("%s %s", r.Method, r.URL.Path)
-		next.ServeHTTP(w, r)
+		h(w, r)
 	})
 }
 
-// --- Routes ---
-func registerRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		path := strings.Trim(r.URL.Path, "/")
-		if path == "" || path == "home" {
-			homeHandler(w, r)
-			return
-		}
-
-		// Handle all garden routes with gardenHandler
-		if strings.HasPrefix(r.URL.Path, "/garden") {
-			gardenHandler(w, r)
-			return
-		}
-
-		switch r.URL.Path {
-		case "/form":
-			formHandler(w, r)
-		case "/set-theme":
-			setThemeHandler(w, r)
-		case "/about":
-			content, _ := renderSnippets([]string{"about.html"}, nil)
-			renderPage(w, PageData{"About", content, getTheme(r), time.Time{}})
-		case "/anilist":
-			animeList, _ := loadAnimeRankings()
-			content, _ := renderSnippets([]string{"anime_table.html"}, map[string]any{"anime_table.html": animeList})
-			renderPage(w, PageData{"My Anime Rankings", content, getTheme(r), time.Time{}})
-		case "/cyber":
-			content, _ := renderSnippets([]string{"cyber.html"}, nil)
-			renderPage(w, PageData{"Cyber", content, getTheme(r), time.Time{}})
-		case "/search":
-			searchHandler(w, r)
-		default:
-			if strings.HasPrefix(r.URL.Path, "/static/") {
-				http.StripPrefix("/static/", http.FileServer(http.Dir("static"))).ServeHTTP(w, r)
-			} else {
-				content, _ := renderSnippets([]string{"404.html"}, nil)
-				renderPage(w, PageData{"404", content, getTheme(r), time.Time{}})
-			}
-		}
-	})
-}
-
-// --- Server ---
-func runLocalHTTP(handler http.Handler) {
-	log.Println("Running in development mode on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", handler))
-}
-
-func runAutocert(handler http.Handler) {
-	certManager := autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist("lamamp.is", "www.lamamp.is"),
-		Cache:      autocert.DirCache("/var/www/.cache"),
-	}
-	server := &http.Server{
-		Addr:      ":443",
-		Handler:   handler,
-		TLSConfig: certManager.TLSConfig(),
-	}
-	go func() {
-		log.Println("Redirecting HTTP to HTTPS...")
-		_ = http.ListenAndServe(":80", certManager.HTTPHandler(nil))
-	}()
-	log.Println("Server running on https://lamamp.is")
-	log.Fatal(server.ListenAndServeTLS("", ""))
-}
-
-// --- Main ---
 func main() {
 	prod := flag.Bool("prod", false, "Run in production mode")
 	flag.Parse()
 
-	// --- Log to a file ---
-	logFile, err := os.OpenFile("access.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatalf("Error opening log file: %v", err)
+	if logFile, err := os.OpenFile("access.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
+		defer logFile.Close()
+		log.SetOutput(logFile)
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
 	}
-	defer logFile.Close()
-	log.SetOutput(logFile)
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	templates = loadTemplates()
-	// Two separate database connections
-	db = connectDB("./comments.db")
-	contentDb = connectDB("./content.db")
+	db = initDB("./comments.db", true)
+	contentDb = initDB("./content.db", false)
 	defer db.Close()
 	defer contentDb.Close()
 
-	mux := http.NewServeMux()
-	registerRoutes(mux)
-	handler := loggingMiddleware(mux)
+	handler := loggedHandler(mainHandler)
 
 	if *prod {
-		runAutocert(handler)
+		certManager := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist("lamamp.is", "www.lamamp.is"),
+			Cache:      autocert.DirCache("/var/www/.cache"),
+		}
+
+		server := &http.Server{Addr: ":443", Handler: handler, TLSConfig: certManager.TLSConfig()}
+
+		go http.ListenAndServe(":80", certManager.HTTPHandler(nil))
+
+		log.Println("Server running on https://lamamp.is")
+		log.Fatal(server.ListenAndServeTLS("", ""))
+
 	} else {
-		runLocalHTTP(handler)
+		log.Println("Running in development mode on http://localhost:8080")
+		log.Fatal(http.ListenAndServe(":8080", handler))
 	}
 }

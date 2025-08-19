@@ -6,7 +6,7 @@
     --font-family-main: "Iosevka", Arial, Verdana;
     --font-size: 14px;
 }
-.welcome-image {
+.invert-image {
     display: block;
     margin: 0 auto;
     border: 1px solid white;
@@ -36,12 +36,30 @@
 
 .left {
     display: flex;
-    align-items: center;
+    align-items: left;
     gap: 14px;
+}
+.right-image {
+    float: right;
+    margin: 10px;
+    max-height: 400px;
+    border-radius: 0px;
+}
+.larry {
+    float: right;
+    margin: 10px;
+    max-width: 190px;
+    border-radius: 0px;
+}
+.left-image {
+    float: left;
+    margin: 10px;
+    max-width: 200px;
+    border-radius: 0px;
 }
 .right {
     display: flex;
-    align-items: center;
+    align-items: right;
     gap: 10px;
 }
 

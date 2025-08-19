@@ -12,7 +12,7 @@ Grab the necessary files [here:](https://drive.google.com/drive/folders/13Nj3NJk
 
 (I cannot include the whole ISO, that's piracy or whatever)
 
-![Eurobeat](/static/images/srdx_eurobeat.png)
+![Eurobeat](/static/images/garden/srdx_eurobeat.png)
 
 ## To Install
 
