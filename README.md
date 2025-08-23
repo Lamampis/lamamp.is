@@ -20,6 +20,5 @@ Update with ```git pull origin main```
 
 Auto update with crontab:
 
-```crontab -e```
-
-```* * * * * cd lamamp.is && git pull origin main > /dev/null 2>&1```
+```crontab -e
+* * * * * cd lamamp.is && git pull origin main > /dev/null 2>&1```
