@@ -3,23 +3,19 @@ Repository for my personal website.
 
 Check it out at www.lamamp.is
 
-Build with ```go build -o lamamp```
+## Run
+Locally: ```go run main.go```
 
-Run with ```./lamamp --prod```
+With HTTPS: ```go run main.go --prod```
 
-Or just ```go run main.go --prod```
-
-To test locally remove the ```--prod``` flag
-
-To run with [Air:](https://github.com/air-verse/air) (auto reload):
+### To run with [Air:](https://github.com/air-verse/air) (auto reload):
 add ```alias air='~/go/bin/air'``` to .zshrc/.bashrc
 
-```air```
+Locally: ```air```
 
-```air -- --prod```
+with HTTPS: ```air -- --prod```
 
-
-# Update
+## Update
 Update with ```git pull origin main```
 
 Auto update with crontab:
