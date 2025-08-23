@@ -1,5 +1,5 @@
 let colour = "random";
-const sparkles = 75; // Max sparkles on screen
+const sparkles = 85; // Max sparkles on screen
 
 let [x, ox, y, oy] = [400, 400, 300, 300];
 let [swide, shigh, sleft, sdown] = [800, 600, 0, 0];
