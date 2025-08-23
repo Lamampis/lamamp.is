@@ -404,7 +404,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	prod := flag.Bool("prod", false, "Run in production mode")
+	https := flag.Bool("https", false, "Run in production mode")
 	flag.Parse()
 
 	templates = loadTemplates()
@@ -416,7 +416,7 @@ func main() {
 	// Wrap mainHandler so it satisfies http.Handler
 	handler := http.HandlerFunc(mainHandler)
 
-	if *prod {
+	if *https {
 		certManager := autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: autocert.HostWhitelist("lamamp.is", "www.lamamp.is"),
