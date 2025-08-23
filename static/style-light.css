@@ -46,9 +46,11 @@
 }
 .right-image {
     float: right;
+    border-radius: 0px;
 }
 .left-image {
     float: left;
+    border-radius: 0px;
 }
 .larry {
     float: right;
@@ -294,4 +296,11 @@ header a.no-underline {
 }
 header {
     text-align: center;
+}
+.video-player {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    border: 1px solid var(--secondary);
 }
