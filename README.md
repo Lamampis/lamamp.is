@@ -18,3 +18,7 @@ To run with [Air:](https://github.com/air-verse/air) (auto reload):
 ```air -- --prod```
 
 Update with ```git pull origin main```
+
+Autoupdate with crontab:
+```crontab -e```
+```* * * * * cd lamamp.is && git pull origin main > /dev/null 2>&1```
