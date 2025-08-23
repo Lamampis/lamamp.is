@@ -382,12 +382,12 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 		renderPage(w, PageData{"About", content, getTheme(r), time.Time{}})
 
 	case r.URL.Path == "/anilist":
-		content := renderSnippets([]string{"anime_table.html"},
+		content := renderSnippets([]string{"anime_table.html", "returnhome.html"},
 			map[string]any{"anime_table.html": getAnimeRankings()})
 		renderPage(w, PageData{"My Anime Rankings", content, getTheme(r), time.Time{}})
 
 	case r.URL.Path == "/cyber":
-		content := renderSnippets([]string{"cyber.html"}, nil)
+		content := renderSnippets([]string{"cyber.html", "returnhome.html"}, nil)
 		renderPage(w, PageData{"Cyber", content, getTheme(r), time.Time{}})
 
 	case r.URL.Path == "/riddles":
