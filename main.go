@@ -134,18 +134,33 @@ func parseMarkdown(path string) (template.HTML, string, time.Time, time.Time, er
 
 				if after, found := strings.CutPrefix(line, "title:"); found {
 					title = strings.TrimSpace(after)
+
 				} else if after, found := strings.CutPrefix(line, "created:"); found {
-					if t, err := time.Parse("2006-01-02", strings.TrimSpace(after)); err == nil {
-						created = t
+					dateStr := strings.TrimSpace(after)
+
+					// Support multiple date formats
+					layouts := []string{
+						"2006-01-02",   // YYYY-MM-DD
+						"02-01-2006",   // DD-MM-YYYY
+						"02 Jan 2006",  // e.g. 14 Jul 2025
+						"Jan 02, 2006", // e.g. Jul 14, 2025
+					}
+
+					for _, layout := range layouts {
+						if t, err := time.Parse(layout, dateStr); err == nil {
+							created = t
+							break
+						}
 					}
 				}
-
 			}
 		}
 	}
 
 	var buf bytes.Buffer
-	goldmark.Convert(body, &buf)
+	if err := goldmark.Convert(body, &buf); err != nil {
+		return "", "", time.Time{}, time.Time{}, err
+	}
 
 	return template.HTML(buf.String()), title, created, modTime, nil
 }
@@ -265,7 +280,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	entries := getGuestbookEntries(guestbookPageSize, (page-1)*guestbookPageSize)
 
 	content := renderSnippets([]string{
-		"welcome.html", "quotes.html", "introduction.html", "latest_posts.html", "guestbook.html", "guest_comments.html",
+		"welcome.html", "quotes.html", "introduction.html", "latest_posts.html", "hotline.html", "guestbook.html", "guest_comments.html",
 	}, map[string]any{
 		"guest_comments.html": map[string]any{"Entries": entries},
 		"quotes.html":         map[string]any{"Quote": getRandomQuote()},
@@ -388,32 +403,9 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func loggedHandler(h http.HandlerFunc) http.Handler {
-	ignored := map[string]bool{
-		".jpg": true, ".jpeg": true, ".png": true, ".gif": true,
-		".css": true, ".js": true, ".woff2": true,
-	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == "GET" && ignored[filepath.Ext(r.URL.Path)] {
-			h(w, r)
-			return
-		}
-
-		log.Printf("%s %s", r.Method, r.URL.Path)
-		h(w, r)
-	})
-}
-
 func main() {
 	prod := flag.Bool("prod", false, "Run in production mode")
 	flag.Parse()
-
-	if logFile, err := os.OpenFile("access.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644); err == nil {
-		defer logFile.Close()
-		log.SetOutput(logFile)
-		log.SetFlags(log.LstdFlags | log.Lshortfile)
-	}
 
 	templates = loadTemplates()
 	db = initDB("./comments.db", true)
@@ -421,7 +413,8 @@ func main() {
 	defer db.Close()
 	defer contentDb.Close()
 
-	handler := loggedHandler(mainHandler)
+	// Wrap mainHandler so it satisfies http.Handler
+	handler := http.HandlerFunc(mainHandler)
 
 	if *prod {
 		certManager := autocert.Manager{
@@ -430,8 +423,13 @@ func main() {
 			Cache:      autocert.DirCache("/var/www/.cache"),
 		}
 
-		server := &http.Server{Addr: ":443", Handler: handler, TLSConfig: certManager.TLSConfig()}
+		server := &http.Server{
+			Addr:      ":443",
+			Handler:   handler,
+			TLSConfig: certManager.TLSConfig(),
+		}
 
+		// Redirect HTTP to HTTPS
 		go http.ListenAndServe(":80", certManager.HTTPHandler(nil))
 
 		log.Println("Server running on https://lamamp.is")
