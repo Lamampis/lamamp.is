@@ -129,7 +129,7 @@ function sparkle() {
         star[c].childNodes[0].style.backgroundColor = colourToSet;
         star[c].childNodes[1].style.backgroundColor = colourToSet;
         star[c].style.visibility = "visible";
-        starv[c] = 40; // Lifetime
+        starv[c] = 70; // Lifetime
         sparklesCreated++;
       }
     }
