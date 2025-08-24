@@ -3,7 +3,7 @@
     --secondary: #ffffff;
     --hover: #2563eb;
     --gray: #708090;
-    --font-family-main: "Iosevka Web", Arial, Verdana, sans-serif;
+    --font-family-main: "Iosevka", Arial, Verdana, sans-serif;
     --font-size: 14px;
 }
 .invert-image {
@@ -23,12 +23,11 @@
 }
 
 @font-face {
-    font-family: "Iosevka Web";
-    font-display: swap;
-    font-weight: 400;
-    font-stretch: normal;
+    font-family: "Iosevka";
     font-style: normal;
-    src: url("WOFF2/Iosevka-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
+    src: url("/static/fonts/Iosevka-Regular.woff2") format("woff2");
 }
 .container {
     display: flex;
