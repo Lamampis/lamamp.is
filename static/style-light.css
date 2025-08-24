@@ -21,6 +21,30 @@
     /* combine all filters */
     filter: invert(100%) grayscale(100%) contrast(120%);
 }
+@font-face {
+    font-family: "Iosevka";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/static/fonts/Iosevka-Regular.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Iosevka";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("/static/fonts/Iosevka-Bold.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Iosevka";
+    font-style: italic;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/static/fonts/Iosevka-Italic.woff2") format("woff2");
+}
+
 .container {
     display: flex;
     justify-content: space-between;
