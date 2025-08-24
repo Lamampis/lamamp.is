@@ -1,10 +1,10 @@
 :root {
-    --primary: #000000;
-    --secondary: #ffffff;
+    --primary: #0a0a0a;
+    --secondary: #f7f7f7;
     --hover: #2563eb;
     --gray: #708090;
     --font-family-main: "Iosevka", Arial, Verdana, sans-serif;
-    --font-size: 15px; /* bump from 14px for crisp rendering */
+    --font-size: 16px; /* bump from 14px for crisp rendering */
 }
 .invert-image {
     display: block;
@@ -25,7 +25,7 @@
 @font-face {
     font-family: "Iosevka";
     src: url("fonts/Iosevka-01.woff2") format("woff2");
-    font-weight: normal;
+    font-weight: 500;
     font-style: normal;
     font-display: swap;
 }
@@ -90,7 +90,6 @@ body {
     /* Cross-browser font rendering improvements */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
     font-smooth: always;
     text-rendering: geometricPrecision;
 }
