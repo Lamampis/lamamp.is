@@ -96,6 +96,13 @@ img {
     width: 100%;
     height: auto;
 }
+img.pixelated {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges; /* fallback */
+}
+img.monochrome {
+    filter: grayscale(100%) contrast(120%);
+}
 nav {
     background: var(--secondary);
     color: var(--primary);
