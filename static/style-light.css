@@ -24,10 +24,11 @@
 
 @font-face {
     font-family: "Iosevka";
-    src: url("fonts/Iosevka-01.woff2") format("woff2");
+    src: url("fonts/Iosevka-Regular.woff2") format("woff2");
     font-weight: 500;
     font-style: normal;
     font-display: swap;
+    font-stretch: normal;
 }
 .container {
     display: flex;
