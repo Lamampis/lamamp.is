@@ -3,7 +3,7 @@
     --secondary: #ffffff;
     --hover: #2563eb;
     --gray: #708090;
-    --font-family-main: "Iosevka", Arial, Verdana, sans-serif;
+    --font-family-main: "Iosevka", Arial, Verdana, sans-serif, monospace;
     --font-size: 15px;
 }
 .invert-image {
@@ -20,14 +20,6 @@
 
     /* combine all filters */
     filter: invert(0%) grayscale(100%) contrast(120%);
-}
-
-@font-face {
-    font-family: "Iosevka";
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url("/static/fonts/iosevka-term-regular.woff2") format("woff2");
 }
 .container {
     display: flex;
@@ -90,8 +82,7 @@ body {
     /* Cross-browser font rendering improvements */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-smooth: always;
-    text-rendering: geometricPrecision;
+    text-rendering: optimizeLegibility;
 }
 
 img {
