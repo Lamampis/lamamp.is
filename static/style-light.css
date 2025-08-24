@@ -10,11 +10,18 @@
     display: block;
     margin: 0 auto;
     border: 1px solid white;
-    filter: invert(100%);
     max-width: 360px;
     width: 100%;
     height: auto;
+
+    /* pixel crispness */
+    image-rendering: pixelated;
+    image-rendering: crisp-edges; /* fallback */
+
+    /* combine all filters */
+    filter: invert(100%) grayscale(100%) contrast(120%);
 }
+
 @font-face {
     font-family: "Iosevka";
     src: url("fonts/Iosevka-01.woff2") format("woff2");
@@ -95,13 +102,6 @@ img {
     max-width: 400px;
     width: 100%;
     height: auto;
-}
-img.pixelated {
-    image-rendering: pixelated;
-    image-rendering: crisp-edges; /* fallback */
-}
-img.monochrome {
-    filter: grayscale(100%) contrast(120%);
 }
 nav {
     background: var(--secondary);
