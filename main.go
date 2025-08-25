@@ -68,12 +68,6 @@ type gzipResponseWriter struct {
 	http.ResponseWriter
 }
 
-func getTheme(r *http.Request) string {
-	if cookie, err := r.Cookie("theme"); err == nil {
-		return cookie.Value
-	}
-	return "dark"
-}
 func gzipHandler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
@@ -97,6 +91,14 @@ func gzipHandler(h http.Handler) http.Handler {
 func (w gzipResponseWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
+
+func getTheme(r *http.Request) string {
+	if cookie, err := r.Cookie("theme"); err == nil {
+		return cookie.Value
+	}
+	return "dark"
+}
+
 func initDB(path string, isComments bool) *sql.DB {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
@@ -461,6 +463,7 @@ func main() {
 	defer db.Close()
 	defer contentDb.Close()
 
+	// Use gzip on the mainhandler
 	handler := gzipHandler(http.HandlerFunc(mainHandler))
 
 	if *https {
