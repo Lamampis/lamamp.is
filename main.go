@@ -121,7 +121,7 @@ func parseMarkdown(path string) (template.HTML, string, time.Time, time.Time, er
 
 	info, _ := os.Stat(path)
 	modTime := info.ModTime()
-	created := modTime
+	created := time.Time{}
 	title := ""
 	body := content
 
@@ -138,12 +138,11 @@ func parseMarkdown(path string) (template.HTML, string, time.Time, time.Time, er
 				} else if after, found := strings.CutPrefix(line, "created:"); found {
 					dateStr := strings.TrimSpace(after)
 
-					// Support multiple date formats
 					layouts := []string{
-						"2006-01-02",   // YYYY-MM-DD
-						"02-01-2006",   // DD-MM-YYYY
-						"02 Jan 2006",  // e.g. 14 Jul 2025
-						"Jan 02, 2006", // e.g. Jul 14, 2025
+						"2006-01-02",     // YYYY-MM-DD
+						"02-01-2006",     // DD-MM-YYYY
+						"02 Jan 2006",    // 14 Jul 2025
+						"January 2 2006", // July 14 2025
 					}
 
 					for _, layout := range layouts {
@@ -155,6 +154,11 @@ func parseMarkdown(path string) (template.HTML, string, time.Time, time.Time, er
 				}
 			}
 		}
+	}
+
+	// fallback: if no created date in frontmatter, use modTime
+	if created.IsZero() {
+		created = modTime
 	}
 
 	var buf bytes.Buffer
@@ -210,7 +214,7 @@ func getGuestbookCount() int {
 func loadTemplates() *template.Template {
 	funcs := template.FuncMap{
 		"join":       strings.Join,
-		"dateFormat": func(t time.Time) string { return t.Format("02 Jan 2006") },
+		"dateFormat": func(t time.Time) string { return t.Format("January 2 2006") },
 	}
 
 	tmpl := template.Must(template.New("base").Funcs(funcs).Parse(
@@ -260,27 +264,42 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		page = 1
 	}
 
-	// for latest posts
+	// collect latest posts
 	files, _ := filepath.Glob("garden/*.md")
 	var pages []GardenPage
 
-	for i, f := range files {
-		if i >= 10 {
-			break
-		}
-
-		if _, title, created, _, _ := parseMarkdown(f); title != "" {
+	for _, f := range files {
+		if _, title, created, modTime, _ := parseMarkdown(f); title != "" {
 			slug := strings.TrimSuffix(filepath.Base(f), ".md")
-			pages = append(pages, GardenPage{Slug: slug, Title: title, ModTime: created})
+			pages = append(pages, GardenPage{
+				Slug:    slug,
+				Title:   title,
+				Created: created,
+				ModTime: modTime,
+			})
 		}
 	}
 
-	sort.Slice(pages, func(i, j int) bool { return pages[i].Created.After(pages[j].Created) })
+	// sort newest first
+	sort.Slice(pages, func(i, j int) bool {
+		return pages[i].Created.After(pages[j].Created)
+	})
+
+	// only keep the 10 most recent
+	if len(pages) > 10 {
+		pages = pages[:10]
+	}
 
 	entries := getGuestbookEntries(guestbookPageSize, (page-1)*guestbookPageSize)
 
 	content := renderSnippets([]string{
-		"welcome.html", "quotes.html", "introduction.html", "latest_posts.html", "hotline.html", "guestbook.html", "guest_comments.html",
+		"welcome.html",
+		"quotes.html",
+		"introduction.html",
+		"latest_posts.html",
+		"hotline.html",
+		"guestbook.html",
+		"guest_comments.html",
 	}, map[string]any{
 		"guest_comments.html": map[string]any{"Entries": entries},
 		"quotes.html":         map[string]any{"Quote": getRandomQuote()},
