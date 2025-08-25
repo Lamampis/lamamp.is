@@ -63,6 +63,11 @@ type MarkdownMeta struct {
 	HTML             template.HTML
 }
 
+type gzipResponseWriter struct {
+	io.Writer
+	http.ResponseWriter
+}
+
 func getTheme(r *http.Request) string {
 	if cookie, err := r.Cookie("theme"); err == nil {
 		return cookie.Value
@@ -87,11 +92,6 @@ func gzipHandler(h http.Handler) http.Handler {
 		gzw := gzipResponseWriter{Writer: gz, ResponseWriter: w}
 		h.ServeHTTP(gzw, r)
 	})
-}
-
-type gzipResponseWriter struct {
-	io.Writer
-	http.ResponseWriter
 }
 
 func (w gzipResponseWriter) Write(b []byte) (int, error) {
