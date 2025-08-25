@@ -2,11 +2,13 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
 	"database/sql"
 	"flag"
 	"fmt"
 	"html"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -67,7 +69,34 @@ func getTheme(r *http.Request) string {
 	}
 	return "dark"
 }
+func gzipHandler(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			// Browser does not support gzip
+			h.ServeHTTP(w, r)
+			return
+		}
 
+		w.Header().Set("Content-Encoding", "gzip")
+		// Optional: vary header for caching
+		w.Header().Set("Vary", "Accept-Encoding")
+
+		gz := gzip.NewWriter(w)
+		defer gz.Close()
+
+		gzw := gzipResponseWriter{Writer: gz, ResponseWriter: w}
+		h.ServeHTTP(gzw, r)
+	})
+}
+
+type gzipResponseWriter struct {
+	io.Writer
+	http.ResponseWriter
+}
+
+func (w gzipResponseWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
 func initDB(path string, isComments bool) *sql.DB {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
@@ -432,8 +461,7 @@ func main() {
 	defer db.Close()
 	defer contentDb.Close()
 
-	// Wrap mainHandler so it satisfies http.Handler
-	handler := http.HandlerFunc(mainHandler)
+	handler := gzipHandler(http.HandlerFunc(mainHandler))
 
 	if *https {
 		certManager := autocert.Manager{
