@@ -12,13 +12,9 @@
     border: 1px solid white;
     max-width: 360px;
     width: 100%;
-    height: auto;
-
-    /* pixel crispness */
+    height: auto; /* pixel crispness */
     image-rendering: pixelated;
-    image-rendering: crisp-edges; /* fallback */
-
-    /* combine all filters */
+    image-rendering: crisp-edges; /* fallback */ /* combine all filters */
     filter: invert(100%) grayscale(100%) contrast(120%);
 }
 @font-face {
@@ -28,28 +24,21 @@
     font-display: swap;
     src: url("/static/fonts/Iosevka-Regular.woff2") format("woff2");
 }
-
 .container {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     padding: 6px;
     margin: 0px;
 }
 .left {
     display: flex;
-    align-items: left;
+    align-items: flex-start;
     gap: 14px;
 }
 .right {
     display: flex;
-    align-items: right;
+    align-items: flex-end;
     gap: 10px;
-}
-.center {
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
 }
 .right-image {
     float: right;
@@ -86,13 +75,10 @@ body {
     max-width: 900px;
     margin: 0 auto;
     line-height: 1.2;
-
-    /* Cross-browser font rendering improvements */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
 }
-
 img {
     display: block;
     margin: 0 auto;
@@ -112,18 +98,10 @@ nav {
 nav a {
     color: var(--primary);
     text-decoration: none;
-    display: flex;
-    align-items: center;
-    line-height: normal;
-    gap: 0.5em;
 }
 nav a:hover {
     color: var(--gray);
     text-decoration: none;
-}
-.nav-text {
-    display: inline-flex;
-    align-items: center;
 }
 .theme-toggle .icon-container {
     display: flex;
@@ -164,6 +142,7 @@ a:hover {
 header,
 footer {
     color: var(--secondary);
+    text-align: center;
 }
 h1 {
     color: var(--secondary);
@@ -308,9 +287,6 @@ header a.no-underline:hover {
 }
 header a.no-underline {
     display: inline-block;
-}
-header {
-    text-align: center;
 }
 .video-player {
     position: relative;
