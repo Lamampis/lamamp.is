@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"html"
 	"html/template"
 	"io"
 	"log"
@@ -406,13 +405,19 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 		gardenHandler(w, r)
 
 	case r.URL.Path == "/form" && r.Method == "POST":
-		name := html.EscapeString(r.FormValue("name"))
+		name := strings.TrimSpace(r.FormValue("name"))
 		if name == "" {
 			name = "Anonymous"
 		}
 
-		message := html.EscapeString(r.FormValue("message"))
-		db.Exec(`INSERT INTO guestbook_entries (name, message) VALUES (?, ?)`, name, message)
+		message := strings.TrimSpace(r.FormValue("message"))
+
+		if _, err := db.Exec(`INSERT INTO guestbook_entries (name, message) VALUES (?, ?)`, name, message); err != nil {
+			log.Printf("failed to insert guestbook entry: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 
 	case r.URL.Path == "/set-theme" && r.Method == "POST":
