@@ -110,12 +110,12 @@ footer {
     text-align: center;
 }
 
-header a.no-underline:hover {
+header a.no_underline:hover {
     color: var(--secondary);
     text-decoration: none;
 }
 
-header a.no-underline {
+header a.no_underline {
     display: inline-block;
 }
 
@@ -216,11 +216,11 @@ figure {
     color: var(--gray);
 }
 
-.no-underline {
+.no_underline {
     text-decoration: none;
 }
 
-.no-underline a {
+.no_underline a {
     text-decoration: none;
 }
 
