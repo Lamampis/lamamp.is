@@ -394,7 +394,7 @@ func gardenHandler(w http.ResponseWriter, r *http.Request) {
 	renderPage(w, PageData{title, content, getTheme(r), modTime})
 }
 
-func mainHandler(w http.ResponseWriter, r *http.Request) {
+func routeHandler(w http.ResponseWriter, r *http.Request) {
 	path := strings.Trim(r.URL.Path, "/")
 
 	switch {
@@ -468,8 +468,8 @@ func main() {
 	defer db.Close()
 	defer contentDb.Close()
 
-	// Use gzip on the mainhandler
-	handler := gzipHandler(http.HandlerFunc(mainHandler))
+	// Use gzip on the routehandler
+	handler := gzipHandler(http.HandlerFunc(routeHandler))
 
 	if *https {
 		certManager := autocert.Manager{
