@@ -130,6 +130,9 @@ ul li:not(:last-child) {
 ol li:not(:last-child) {
     margin-bottom: 2px;
 }
+li {
+    margin-bottom: 4px;
+}
 
 h1 {
     color: var(--secondary);
