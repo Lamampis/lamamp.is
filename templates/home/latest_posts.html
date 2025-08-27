@@ -1,6 +1,12 @@
 <h2>Latest Posts:</h2>
 <div class="box">
-    <ul>
+    <ul
+        style="
+            list-style-position: outside;
+            padding-left: 10px;
+            margin-left: 12px;
+        "
+    >
         {{ range .Pages }}
         <li>
             <a href="/garden/{{ .Slug }}" class="no_underline"
