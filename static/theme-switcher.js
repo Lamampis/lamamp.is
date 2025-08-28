@@ -1,7 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   const switcher = document.getElementById("theme-switch");
 
-  // Set checkbox state based on current theme
   switcher.checked = document.documentElement.classList.contains("light");
 
   switcher.addEventListener("change", () => {
@@ -28,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     document.head.appendChild(css);
 
-    // 🔄 Restart SVG animations by cloning them
+    // restart svg
     document.querySelectorAll(".icon").forEach((icon) => {
       const clone = icon.cloneNode(true);
       icon.parentNode.replaceChild(clone, icon);

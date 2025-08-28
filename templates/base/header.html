@@ -27,14 +27,12 @@
 
         <script defer src="/static/theme-switcher.js"></script>
 
-        <!-- Fallback for no-JS: always dark theme -->
         <link
             rel="stylesheet"
             id="theme-fallback"
             href="/static/style-dark.css"
         />
 
-        <!-- JS will override the above immediately -->
         <script>
             (function () {
                 const saved = localStorage.getItem("theme");
