@@ -2,12 +2,10 @@ package main
 
 import (
 	"bytes"
-	"compress/gzip"
 	"database/sql"
 	"flag"
 	"fmt"
 	"html/template"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -60,35 +58,6 @@ type MarkdownMeta struct {
 	Slug, Title      string
 	Created, ModTime time.Time
 	HTML             template.HTML
-}
-
-type gzipResponseWriter struct {
-	io.Writer
-	http.ResponseWriter
-}
-
-func gzipHandler(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			// Browser does not support gzip
-			h.ServeHTTP(w, r)
-			return
-		}
-
-		w.Header().Set("Content-Encoding", "gzip")
-		// Optional: vary header for caching
-		w.Header().Set("Vary", "Accept-Encoding")
-
-		gz := gzip.NewWriter(w)
-		defer gz.Close()
-
-		gzw := gzipResponseWriter{Writer: gz, ResponseWriter: w}
-		h.ServeHTTP(gzw, r)
-	})
-}
-
-func (w gzipResponseWriter) Write(b []byte) (int, error) {
-	return w.Writer.Write(b)
 }
 
 func getTheme(r *http.Request) string {
@@ -468,8 +437,7 @@ func main() {
 	defer db.Close()
 	defer contentDb.Close()
 
-	// Use gzip on the routehandler
-	handler := gzipHandler(http.HandlerFunc(routeHandler))
+	handler := http.HandlerFunc(routeHandler)
 
 	if *https {
 		certManager := autocert.Manager{
