@@ -44,7 +44,7 @@ body {
     margin: 0 auto;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
+    text-rendering: auto;
 }
 
 main {
@@ -173,13 +173,13 @@ figure {
 .figure-right {
     float: right;
     margin: 0 0 10px 10px;
-    max-width: 190px;
+    max-width: 180px;
 }
 
 .figure-left {
     float: left;
     margin: 0 10px 10px 0;
-    max-width: 190px;
+    max-width: 180px;
 }
 
 .theme-toggle .icon-container {
