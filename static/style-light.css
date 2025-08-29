@@ -21,8 +21,16 @@
     width: 100%;
     height: auto; /* pixel crispness */
     image-rendering: pixelated;
-    image-rendering: crisp-edges;
+    image-rendering: crisp-edges; /* fallback */ /* combine all filters */
     filter: invert(100%) grayscale(100%) contrast(120%);
+}
+
+@font-face {
+    font-family: "Iosevka";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("/static/fonts/Iosevka-Regular.woff2") format("woff2");
 }
 
 html,
