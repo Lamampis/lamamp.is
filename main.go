@@ -381,6 +381,11 @@ func routeHandler(w http.ResponseWriter, r *http.Request) {
 
 		message := strings.TrimSpace(r.FormValue("message"))
 
+		if message == "" {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+
 		if _, err := db.Exec(`INSERT INTO guestbook_entries (name, message) VALUES (?, ?)`, name, message); err != nil {
 			log.Printf("failed to insert guestbook entry: %v", err)
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
