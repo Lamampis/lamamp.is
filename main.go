@@ -73,6 +73,10 @@ func initDB(path string, isComments bool) *sql.DB {
 		log.Fatal(err)
 	}
 
+	if _, err := db.Exec("PRAGMA journal_mode=WAL;"); err != nil {
+		log.Printf("Failed to set WAL mode: %v", err)
+	}
+
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)
 	}
@@ -175,17 +179,20 @@ func getRandomQuote() string {
 }
 
 func getGuestbookEntries(limit, offset int) []GuestbookEntry {
-	rows, _ := db.Query(`SELECT name, message, timestamp FROM guestbook_entries ORDER BY timestamp DESC LIMIT ? OFFSET ?`, limit, offset)
+	rows, err := db.Query(`SELECT name, message, timestamp FROM guestbook_entries ORDER BY timestamp DESC LIMIT ? OFFSET ?`, limit, offset)
+	if err != nil {
+		log.Printf("DB error: %v", err)
+		return nil
+	}
 	defer rows.Close()
 
 	var entries []GuestbookEntry
 	for rows.Next() {
 		var e GuestbookEntry
-		if rows.Scan(&e.Name, &e.Message, &e.Timestamp) == nil {
+		if err := rows.Scan(&e.Name, &e.Message, &e.Timestamp); err == nil {
 			entries = append(entries, e)
 		}
 	}
-
 	return entries
 }
 
