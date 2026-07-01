@@ -374,6 +374,12 @@ func routeHandler(w http.ResponseWriter, r *http.Request) {
 		gardenHandler(w, r)
 
 	case r.URL.Path == "/form" && r.Method == "POST":
+		if strings.TrimSpace(r.FormValue("email")) != "" {
+			log.Printf("Spam bot blocked from guestbook submission")
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+
 		name := strings.TrimSpace(r.FormValue("name"))
 		if name == "" {
 			name = "Anonymous"
@@ -418,10 +424,6 @@ func routeHandler(w http.ResponseWriter, r *http.Request) {
 	case r.URL.Path == "/cyber":
 		content := renderSnippets([]string{"cyber.html", "returnhome.html"}, nil)
 		renderPage(w, PageData{"Cyber", content, getTheme(r), time.Time{}})
-
-	case r.URL.Path == "/riddles":
-		content := renderSnippets([]string{"dark_coins.html", "return.html"}, nil)
-		renderPage(w, PageData{"Riddles", content, getTheme(r), time.Time{}})
 
 	case strings.HasPrefix(r.URL.Path, "/static/"):
 		http.StripPrefix("/static/", http.FileServer(http.Dir("static"))).ServeHTTP(w, r)
