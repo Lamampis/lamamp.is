@@ -175,20 +175,17 @@ func getRandomQuote() string {
 }
 
 func getGuestbookEntries(limit, offset int) []GuestbookEntry {
-	rows, err := db.Query(`SELECT name, message, timestamp FROM guestbook_entries ORDER BY timestamp DESC LIMIT ? OFFSET ?`, limit, offset)
-	if err != nil {
-		log.Printf("DB error: %v", err)
-		return nil
-	}
+	rows, _ := db.Query(`SELECT name, message, timestamp FROM guestbook_entries ORDER BY timestamp DESC LIMIT ? OFFSET ?`, limit, offset)
 	defer rows.Close()
 
 	var entries []GuestbookEntry
 	for rows.Next() {
 		var e GuestbookEntry
-		if err := rows.Scan(&e.Name, &e.Message, &e.Timestamp); err == nil {
+		if rows.Scan(&e.Name, &e.Message, &e.Timestamp) == nil {
 			entries = append(entries, e)
 		}
 	}
+
 	return entries
 }
 
