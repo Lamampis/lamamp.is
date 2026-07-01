@@ -73,10 +73,6 @@ func initDB(path string, isComments bool) *sql.DB {
 		log.Fatal(err)
 	}
 
-	if _, err := db.Exec("PRAGMA journal_mode=WAL;"); err != nil {
-		log.Printf("Failed to set WAL mode: %v", err)
-	}
-
 	if err := db.Ping(); err != nil {
 		log.Fatal(err)
 	}
