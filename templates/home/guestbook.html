@@ -10,6 +10,17 @@
                 placeholder="(optional)"
                 maxlength="20"
             />
+
+            <div class="hidden-field" aria-hidden="true">
+                <label for="email">Email:</label>
+                <input
+                    type="text"
+                    name="email"
+                    id="email"
+                    autocomplete="off"
+                    tabindex="-1"
+                />
+            </div>
             <label for="message">Comment:</label>
             <textarea
                 name="message"
@@ -22,8 +33,8 @@
             <button type="submit">Sign Guestbook</button>
         </form>
     </div>
-    <small
-        >Please keep your comments respectful and don't spam. Anyone can comment
+    <small>
+        Please keep your comments respectful and don't spam. Anyone can comment
         without an account, so don't ruin it for others.
     </small>
 </details>
