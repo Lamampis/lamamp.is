@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/feeds"
 	"github.com/yuin/goldmark"
 	"golang.org/x/crypto/acme/autocert"
 	"golang.org/x/text/cases"
@@ -43,10 +45,10 @@ type GuestbookEntry struct {
 }
 
 type GardenPage struct {
-	Slug, Title string
-	Created     time.Time
-	ModTime     time.Time
-	Tags        []string
+	Slug, Title, Image string
+	Created            time.Time
+	ModTime            time.Time
+	Tags               []string
 }
 
 type Anime struct {
@@ -112,20 +114,24 @@ func initDB(path string, isComments bool) *sql.DB {
 	return db
 }
 
-func parseMarkdown(path string) (template.HTML, string, time.Time, time.Time, error) {
+func parseMarkdown(path string) (template.HTML, string, string, time.Time, time.Time, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return "", "", time.Time{}, time.Time{}, err
+		return "", "", "", time.Time{}, time.Time{}, err
 	}
 
 	info, _ := os.Stat(path)
 	modTime := info.ModTime()
 	created := time.Time{}
 	title := ""
+	image := ""
 	body := content
 
-	if strings.HasPrefix(string(content), "---") {
-		if parts := strings.SplitN(string(content), "---", 3); len(parts) >= 3 {
+	// Standardize line endings to \n (fixes Windows CRLF issues)
+	normalized := strings.ReplaceAll(string(content), "\r\n", "\n")
+
+	if strings.HasPrefix(normalized, "---") {
+		if parts := strings.SplitN(normalized, "---", 3); len(parts) >= 3 {
 			body = []byte(parts[2])
 
 			for _, line := range strings.Split(parts[1], "\n") {
@@ -133,15 +139,23 @@ func parseMarkdown(path string) (template.HTML, string, time.Time, time.Time, er
 
 				if after, found := strings.CutPrefix(line, "title:"); found {
 					title = strings.TrimSpace(after)
-
+					title = strings.Trim(title, "\"'") // Clean surrounding quotes
+				} else if after, found := strings.CutPrefix(line, "image:"); found {
+					image = strings.TrimSpace(after)
+					image = strings.Trim(image, "\"'") // Clean surrounding quotes
+				} else if after, found := strings.CutPrefix(line, "cover:"); found {
+					image = strings.TrimSpace(after)
+					image = strings.Trim(image, "\"'") // Clean surrounding quotes
 				} else if after, found := strings.CutPrefix(line, "created:"); found {
 					dateStr := strings.TrimSpace(after)
+					dateStr = strings.Trim(dateStr, "\"'")
 
 					layouts := []string{
-						"2006-01-02",     // YYYY-MM-DD
-						"02-01-2006",     // DD-MM-YYYY
-						"02 Jan 2006",    // 14 Jul 2025
-						"January 2 2006", // July 14 2025
+						"2006-01-02",
+						"02-01-2006",
+						"10-05-2006",
+						"02 Jan 2006",
+						"January 2 2006",
 					}
 
 					for _, layout := range layouts {
@@ -155,17 +169,16 @@ func parseMarkdown(path string) (template.HTML, string, time.Time, time.Time, er
 		}
 	}
 
-	// fallback: if no created date in frontmatter, use modTime
 	if created.IsZero() {
 		created = modTime
 	}
 
 	var buf bytes.Buffer
 	if err := goldmark.Convert(body, &buf); err != nil {
-		return "", "", time.Time{}, time.Time{}, err
+		return "", "", "", time.Time{}, time.Time{}, err
 	}
 
-	return template.HTML(buf.String()), title, created, modTime, nil
+	return template.HTML(buf.String()), title, image, created, modTime, nil
 }
 
 func getRandomQuote() string {
@@ -214,6 +227,12 @@ func loadTemplates() *template.Template {
 	funcs := template.FuncMap{
 		"join":       strings.Join,
 		"dateFormat": func(t time.Time) string { return t.Format("January 2 2006") },
+		"randomChoice": func(a, b string) string {
+			if rand.Intn(2) == 0 {
+				return a
+			}
+			return b
+		},
 	}
 
 	tmpl := template.Must(template.New("base").Funcs(funcs).Parse(
@@ -268,7 +287,8 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	var pages []GardenPage
 
 	for _, f := range files {
-		if _, title, created, modTime, _ := parseMarkdown(f); title != "" {
+		// Change this line: added an extra "_" for the image parameter
+		if _, title, _, created, modTime, _ := parseMarkdown(f); title != "" {
 			slug := strings.TrimSuffix(filepath.Base(f), ".md")
 			pages = append(pages, GardenPage{
 				Slug:    slug,
@@ -296,6 +316,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		"quotes.html",
 		"introduction.html",
 		"latest_posts.html",
+		// "blinkies.html", will uncomment when ready
 		"hotline.html",
 		"guestbook.html",
 		"guest_comments.html",
@@ -318,17 +339,36 @@ func gardenHandler(w http.ResponseWriter, r *http.Request) {
 		var pages []GardenPage
 
 		for _, f := range files {
-			if _, title, created, modTime, _ := parseMarkdown(f); title != "" {
-				slug := strings.TrimSuffix(filepath.Base(f), ".md")
-				if title == "" {
-					title = cases.Title(language.English).String(slug)
-				}
-
-				pages = append(pages, GardenPage{
-					Slug: slug, Title: title, Created: created, ModTime: modTime,
-				})
+			_, title, image, created, modTime, err := parseMarkdown(f)
+			if err != nil {
+				continue
 			}
+
+			slug := strings.TrimSuffix(filepath.Base(f), ".md")
+
+			// Fallback: If no frontmatter title, use filename
+			if title == "" {
+				title = cases.Title(language.English).String(strings.ReplaceAll(slug, "-", " "))
+			}
+
+			// Fallback: Random image if not defined in markdown frontmatter
+			if image == "" {
+				image = "https://picsum.photos/400/300"
+			}
+
+			pages = append(pages, GardenPage{
+				Slug:    slug,
+				Title:   title,
+				Image:   image,
+				Created: created,
+				ModTime: modTime,
+			})
 		}
+
+		// Sort newest first
+		sort.Slice(pages, func(i, j int) bool {
+			return pages[i].Created.After(pages[j].Created)
+		})
 
 		content := renderSnippets([]string{"garden_main.html"},
 			map[string]any{"garden_main.html": map[string]any{"Pages": pages}})
@@ -342,14 +382,15 @@ func gardenHandler(w http.ResponseWriter, r *http.Request) {
 	fullPath := filepath.Join("garden", path)
 
 	if _, err := os.Stat(fullPath); err != nil {
-		// Use custom 404 page instead of http.NotFound
 		w.WriteHeader(http.StatusNotFound)
 		content := renderSnippets([]string{"404.html"}, nil)
 		renderPage(w, PageData{"404", content, getTheme(r), time.Time{}})
 		return
 	}
 
-	html, title, created, modTime, _ := parseMarkdown(fullPath)
+	// Inside gardenHandler (single post rendering):
+
+	html, title, _, created, modTime, _ := parseMarkdown(fullPath)
 	if title == "" {
 		title = cases.Title(language.English).String(strings.TrimSuffix(path, ".md"))
 	}
@@ -359,8 +400,58 @@ func gardenHandler(w http.ResponseWriter, r *http.Request) {
 		created.Format("02-01-2006"), modTime.Format("02-01-2006")))
 
 	returnContent := renderSnippets([]string{"return.html"}, nil)
-	content := dateInfo + html + template.HTML(returnContent)
+
+	content := dateInfo + template.HTML(`<article class="post-content">`) + html + template.HTML(`</article>`) + template.HTML(returnContent)
+
 	renderPage(w, PageData{title, content, getTheme(r), modTime})
+}
+
+func rssHandler(w http.ResponseWriter, r *http.Request) {
+	now := time.Now()
+
+	feed := &feeds.Feed{
+		Title:       "Lamampis",
+		Link:        &feeds.Link{Href: "https://lamamp.is/garden"},
+		Description: "lamamp.is blog posts",
+		Author:      &feeds.Author{Name: "Lamampis"},
+		Created:     now,
+	}
+
+	files, _ := filepath.Glob("garden/*.md")
+	var items []*feeds.Item
+
+	for _, f := range files {
+		// Parse markdown body and metadata
+		htmlContent, title, _, created, _, err := parseMarkdown(f)
+		if err != nil {
+			continue
+		}
+
+		slug := strings.TrimSuffix(filepath.Base(f), ".md")
+
+		if title == "" {
+			title = cases.Title(language.English).String(strings.ReplaceAll(slug, "-", " "))
+		}
+
+		items = append(items, &feeds.Item{
+			Title:       title,
+			Link:        &feeds.Link{Href: "https://lamamp.is/garden/" + slug},
+			Description: string(htmlContent),
+			Created:     created,
+		})
+	}
+
+	// Sort feed items newest first
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Created.After(items[j].Created)
+	})
+
+	feed.Items = items
+
+	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	if err := feed.WriteRss(w); err != nil {
+		http.Error(w, "Failed to generate RSS feed", http.StatusInternalServerError)
+	}
 }
 
 func routeHandler(w http.ResponseWriter, r *http.Request) {
@@ -427,6 +518,12 @@ func routeHandler(w http.ResponseWriter, r *http.Request) {
 
 	case strings.HasPrefix(r.URL.Path, "/static/"):
 		http.StripPrefix("/static/", http.FileServer(http.Dir("static"))).ServeHTTP(w, r)
+
+	case r.URL.Path == "/rss.xml":
+		rssHandler(w, r)
+
+	case path == "garden" || strings.HasPrefix(r.URL.Path, "/garden/"):
+		gardenHandler(w, r)
 
 	default:
 		content := renderSnippets([]string{"404.html"}, nil)
