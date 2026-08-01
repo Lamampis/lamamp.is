@@ -1,17 +1,37 @@
 <div class="centered_text">
     <h1>The Garden</h1>
+    <p>
+        All my blogposts are here. You can subscribe via RSS to get notified
+        whenever I post.
+    </p>
+    <div class="button-wall">
+        <a href="/rss.xml" target="_blank" title="Subscribe via RSS">
+            <img
+                src="/static/images/blinkies/rss-button.gif"
+                alt="RSS Feed"
+                width="88"
+                height="31"
+            />
+        </a>
+    </div>
     <hr />
-    <ul style="list-style-type: none; padding: 0">
+    <div class="garden-grid">
         {{ range .Pages }}
-        <li style="margin-bottom: 15px">
-            <a href="/garden/{{ .Slug }}" class="no_underline">[{{ .Title }}]</a
-            ><br />
+        <article class="blog-card">
+            <a href="/garden/{{ .Slug }}" class="card-link">
+                <div class="card-image-wrapper">
+                    <img src="{{ .Image }}" alt="{{ .Title }}" />
+                </div>
 
-            <small>
-                Created: {{ .Created.Format "Jan 02 2006" }} | Updated: {{
-                .ModTime.Format "Jan 02 2006" }}
-            </small>
-        </li>
+                <div class="card-content">
+                    <h2 class="card-title">[{{ .Title }}]</h2>
+                    <small class="card-meta">
+                        Created: {{ .Created.Format "Jan 02 2006" }} | Updated:
+                        {{ .ModTime.Format "Jan 02 2006" }}
+                    </small>
+                </div>
+            </a>
+        </article>
         {{ end }}
-    </ul>
+    </div>
 </div>
