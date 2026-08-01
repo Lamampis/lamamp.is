@@ -1,6 +1,7 @@
 ---
 title: Guide: Add Eurobeat to Sonic Riders DX
 created: 17-07-2025
+cover: "/static/images/garden/srdx_eurobeat.png"
 ---
 
 # Guide: Add Eurobeat to Sonic Riders DX
@@ -12,7 +13,7 @@ Grab the necessary files [here:](https://drive.google.com/drive/folders/13Nj3NJk
 
 (I cannot include the whole ISO, that's piracy or whatever)
 
-![Eurobeat](/static/images/garden/srdx_eurobeat.png)
+![Eurobeat](/static/images/garden/srdx_eurobeat.png#medium)
 
 ## To Install
 
@@ -30,4 +31,4 @@ Grab the necessary files [here:](https://drive.google.com/drive/folders/13Nj3NJk
 
 ### That's it! Your eurobeat dreams have become reality! You can now safely delete the folder you made in step 2.
 
-[Full Tracklist (txt download)](https://cdn.discordapp.com/attachments/1159500429328130090/1159500535976693833/Track_List.txt?ex=68669686&is=68654506&hm=65991e3988ffaf84a0a9a6ac9b4e3ec71a4f035a5a91b83c02b3a1a22299b513&)
+[Full Tracklist](/static/files/Track_List.txt)
