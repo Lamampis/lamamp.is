@@ -5,7 +5,7 @@ cover: "/static/images/garden/nikon/DSCN0426.JPG"
 ---
 
 # Nikon Coolpix L28 Gallery
-![L28 Front](/static/images/garden/nikon/l28.png#medium)
+![L28 Front](/static/images/garden/nikon/l28_lowres.png#medium)
 *pictures of the camera itself were taken from [this](https://www.carousell.ph/p/nikon-coolpix-l28-digital-camera-1255107121/) listing*
 
 I recently purchased a used Nikon Coolpix L28 digital camera. It's a budget digital camera from 2013 that takes really cute photos. It uses AA batteries which I prefer over proprietary batteries and chargers, and it's very simple to use. Here are some of my favourite pictures I've taken with it so far.
